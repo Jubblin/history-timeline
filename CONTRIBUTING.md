@@ -49,7 +49,7 @@ Option 2: install Go 1.26 or newer locally and run the commands below directly.
 
 ### Chrome extension
 
-The extension in `extension/` needs Node 22+ on the host and has no npm dependencies.
+The extension in `extension/` needs Node 22+ on the host. The shipped extension has no npm dependencies; the only devDependency is `playwright-core` (exact-pinned, lockfile committed) for the browser checks.
 
 | Command | Purpose |
 |---|---|
@@ -57,8 +57,9 @@ The extension in `extension/` needs Node 22+ on the host and has no npm dependen
 | `make extension-check` | fails if the extension's copy of `internal/classify/rules.json` is stale (`make extension-sync` fixes it) |
 | `make extension-lint` | manifest lint |
 | `make extension-zip` | reproducible zip in `dist/` |
+| `make browser-check` | Playwright checks (`chrome-check`, `ui-check`, `zip-check`); needs `cd extension && npm ci && npx playwright-core install --with-deps chromium` first |
 
-Browser checks (`extension/scripts/chrome-check.cjs`, `ui-check.cjs`, `zip-check.cjs`) need `playwright-core` and its full Chromium (branded Chrome ignores `--load-extension`); see `extension/README.md`. They use synthetic fixture data only. Never put real history in extension tests or screenshots. Anything for tests (stub classifier, mock history, fixture page) lives in `extension/ui/test-support/`, which must never be shipped or imported from shipped code; the zip test enforces that.
+Browser checks (`extension/scripts/chrome-check.cjs`, `ui-check.cjs`, `zip-check.cjs`) need `playwright-core` and its full Chromium (branded Chrome ignores `--load-extension`); install with `npm ci` in `extension/` as above and see `extension/README.md`. They use synthetic fixture data only. Never put real history in extension tests or screenshots. Anything for tests (stub classifier, mock history, fixture page) lives in `extension/ui/test-support/`, which must never be shipped or imported from shipped code; the zip test enforces that.
 
 Try the UI with `make run-fixture` and open the URL it prints (it contains the per-run access token). With curl, send `-H "X-History-Timeline-Token: <token>"`. The token cookie is `Secure`, so use a Chromium-based browser or Firefox for the UI (Safari does not send Secure cookies over http); the cookie must stay `Secure`.
 
@@ -140,3 +141,12 @@ Before opening a pull request:
 - [ ] small, focused commits with clear messages
 
 By contributing you agree that your contributions are licensed under the MIT licence (see [LICENSE](LICENSE)).
+
+#### Promoting the browser checks
+
+The `extension-browser` CI job runs the Playwright checks and is **advisory**: it has `continue-on-error: true` and is not in the `ci-ok` `needs` list, so a failure shows on the pull request but cannot fail `ci-ok`. It follows the same path filter as the `extension` job, so docs-only changes skip it.
+
+Promotion rule: once the job has **10 consecutive green runs on `main`** (count only runs where it actually executed, not skipped), make it blocking with two edits in `.github/workflows/ci.yml`:
+
+1. Remove `continue-on-error: true` from the `extension-browser` job.
+2. Add `extension-browser` to the `ci-ok` job's `needs` list. Its existing result loop then requires `success` or `skipped`, so no other change is needed.

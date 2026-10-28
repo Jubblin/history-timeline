@@ -17,6 +17,21 @@
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "actions-minor-patch"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm-minor-patch"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "govulncheck pinned by commit in security.yml",
+      "managerFilePatterns": ["/^\\.github/workflows/security\\.yml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) currentValue=(?<currentValue>\\S+)\\n\\s*run: go run golang\\.org/x/vuln/cmd/govulncheck@(?<currentDigest>[a-f0-9]{40})"
+      ]
     }
   ]
 }

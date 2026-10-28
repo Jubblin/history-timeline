@@ -176,6 +176,52 @@ jobs:
             dist/SHA256SUMS-extension
           if-no-files-found: error
 
+  # Playwright browser checks (full Chromium, synthetic data only).
+  # ADVISORY: continue-on-error is set and this job is deliberately NOT in the
+  # ci-ok needs list, so a failure cannot block merges. Promote it only after
+  # 10 consecutive green runs on main (see CONTRIBUTING.md, "Promoting the
+  # browser checks").
+  extension-browser:
+    needs: changes
+    if: needs.changes.outputs.extension == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - name: Install dependencies from the lockfile
+        working-directory: extension
+        run: npm ci
+      - name: Read the pinned Playwright version
+        id: pw
+        working-directory: extension
+        run: echo "version=$(node -p "require('playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the Chromium download
+        id: browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Chromium and its system libraries
+        if: steps.browsers.outputs.cache-hit != 'true'
+        working-directory: extension
+        run: npx playwright-core install --with-deps chromium
+      - name: Install system libraries only (browser restored from cache)
+        if: steps.browsers.outputs.cache-hit == 'true'
+        working-directory: extension
+        run: npx playwright-core install-deps chromium
+      - name: Browser checks (chrome-check, ui-check, zip-check)
+        run: make browser-check
+
   # One stable check name to require in branch protection. Skipped jobs pass;
   # failed or cancelled ones fail it.
   ci-ok:

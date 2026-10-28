@@ -9,7 +9,7 @@ BIN ?= bin/history-timeline
 export CGO_ENABLED ?= 0
 LDFLAGS := -s -w
 
-.PHONY: build test cross fixture run-fixture dev-provider dev-up dev-shell dev-down extension-test extension-sync extension-check ui-sync ui-check extension-lint extension-zip
+.PHONY: build test cross fixture run-fixture dev-provider dev-up dev-shell dev-down extension-test extension-sync extension-check ui-sync ui-check extension-lint extension-zip browser-check
 
 build:
 	go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/history-timeline
@@ -78,3 +78,10 @@ extension-lint:
 # Pass TAG=vX.Y.Z to require the manifest version to match.
 extension-zip: extension-check ui-check extension-lint
 	node extension/scripts/build-zip.mjs --out dist $(if $(TAG),--tag "$$TAG",)
+
+# Playwright browser checks (need `cd extension && npm ci` and
+# `npx playwright-core install --with-deps chromium`). Synthetic data only.
+browser-check: extension-zip
+	cd extension && node scripts/chrome-check.cjs
+	cd extension && node scripts/ui-check.cjs
+	cd extension && node scripts/zip-check.cjs "$$(ls ../dist/history-timeline-extension_v*.zip | head -n 1)"
