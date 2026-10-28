@@ -64,6 +64,7 @@ jobs:
         # Pinned to a commit (v1.1.4, the latest tag, panics on current Go:
         # its golang.org/x/tools cannot build SSA for the newest stdlib).
         # Bump together with the Go toolchain.
+        # renovate: datasource=git-refs depName=https://go.googlesource.com/vuln currentValue=master
         run: go run golang.org/x/vuln/cmd/govulncheck@e672cbe8fbc8c76e28fcb6db0efd9ce354e0dac5 ./...
 
   codeql:

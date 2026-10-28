@@ -27,9 +27,13 @@ Full guide for the release zip: [`docs/INSTALL-EXTENSION.md`](../docs/INSTALL-EX
 - `make extension-test` (from the repo root) runs `node:test` unit tests; Node 22+, no dependencies. Includes manifest checks
   (MV3, permissions, CSP, no network/eval).
 - `scripts/chrome-check.cjs` loads the unpacked extension in headless Chromium with a throwaway profile, browses local pages to
-  create real history, and checks the service worker and data layer. Needs `playwright-core` and its Chromium
-  (branded Chrome ignores `--load-extension`):
-  `PLAYWRIGHT_BROWSERS_PATH=<dir> NODE_PATH=<dir>/node_modules node scripts/chrome-check.cjs`.
+  create real history, and checks the service worker and data layer. Needs the pinned `playwright-core` devDependency and its
+  Chromium (branded Chrome ignores `--load-extension`). One-time setup, from `extension/`:
+  `npm ci && npx playwright-core install --with-deps chromium` (`--with-deps` needs sudo on Linux; drop it if the system
+  libraries are already present). Then run `make browser-check` from the repo root (builds the zip, then runs `chrome-check.cjs`,
+  `ui-check.cjs` and `zip-check.cjs`), or run one script directly from `extension/`, e.g. `node scripts/chrome-check.cjs`.
+  Chromium runs with `--headless=new`, so no X server or xvfb is needed. `playwright-core` is a devDependency only; the zip
+  allowlist never includes it. In CI these run in the advisory `extension-browser` job.
 
 ## Classifier
 
