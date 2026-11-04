@@ -55,8 +55,8 @@ Scheduled and manual runs, new branches and force pushes run everything. The rel
 ## Project layout
 
 - `extension/`: the Manifest V3 extension (see `extension/README.md`).
-- `shared/ui-common.js`: source of truth for UI helpers; `make ui-sync` copies it to `extension/ui/`.
-- `extension/src/classify/rules.json`: source of truth for the bundled category rules; `make extension-sync` generates `rules.js` from it.
+- `shared/ui-common.js`: source of truth for UI helpers; `make ui-sync` copies it to `extension/ui/`. Also hand-synced into the Go repo ([Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app), `web/static/ui-common.js`): after changing it here, copy it there.
+- `extension/src/classify/rules.json`: source of truth for the bundled category rules; `make extension-sync` generates `rules.js` from it. The Go repo keeps a hand-synced copy (`internal/classify/rules.json`): after changing it here, copy it there and regenerate its vectors (`UPDATE_VECTORS=1 go test ./internal/classify -run TestVectorsFresh`), then copy `internal/classify/testdata/vectors.json` back to `extension/test/vectors.json`. `extension/test/filter-cases.json` is also shared with the Go repo (`internal/server/testdata/filter-cases.json`); change both together.
 
 ## Design principles
 

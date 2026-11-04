@@ -5,7 +5,7 @@
 
 A local, read-only browsing history audit tool: a Chrome extension that shows a timeline of your browser history and flags sensitive visits. No data leaves your machine.
 
-> **The standalone Go app has moved.** The command-line binary with the embedded web UI now lives in its own repository: [Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app). This repository contains only the Chrome extension.
+> **The standalone Go app has moved.** The command-line binary with the embedded web UI now lives in its own repository: [Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app). This repository contains only the Chrome extension. It is the source of truth for the classifier rules (`extension/src/classify/rules.json`) and `shared/ui-common.js`; the Go repository keeps hand-synced copies of both and of the shared test fixtures (`extension/test/vectors.json`, `extension/test/filter-cases.json`).
 
 ## Browser extension
 
