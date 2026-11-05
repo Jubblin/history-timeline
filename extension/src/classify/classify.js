@@ -1,5 +1,5 @@
-// JavaScript port of internal/classify (Go). Behaviour must stay identical;
-// test/vectors.json (exported from the Go classifier) is the shared contract.
+// JavaScript classifier. Behaviour is pinned by test/vectors.json (originally exported
+// from the Go classifier, now in a separate repository).
 // Pure: no network, no logging, no URLs retained.
 
 export const CATEGORIES = ['adult', 'finance', 'gambling', 'health', 'news_politics', 'privacy'];

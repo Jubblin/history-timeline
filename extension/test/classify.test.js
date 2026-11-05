@@ -16,7 +16,7 @@ test('six categories', () => {
   assert.deepEqual(CATEGORIES, ['adult', 'finance', 'gambling', 'health', 'news_politics', 'privacy']);
 });
 
-test('bundled vectors match the Go classifier 100%', () => {
+test('bundled vectors match the recorded vectors 100%', () => {
   const c = new Classifier(bundled);
   const bad = vectors.bundled.filter((v) => JSON.stringify(c.classify(v.url)) !== JSON.stringify(v.want));
   assert.equal(bad.length, 0, JSON.stringify(bad.slice(0, 5).map((v) => [v.url, v.want, c.classify(v.url)])));
@@ -26,7 +26,7 @@ test('bundled vectors match the Go classifier 100%', () => {
   assert.ok(vectors.bundled.length > 1000);
 });
 
-test('user-rule vectors match the Go classifier 100%', () => {
+test('user-rule vectors match the recorded vectors 100%', () => {
   assert.ok(vectors.user.length >= 4);
   for (const set of vectors.user) {
     const c = new Classifier(bundled, parseUserRules(JSON.stringify(set.rules), bundled));

@@ -1,12 +1,11 @@
 // Single source of truth: shared/ui-common.js.
-// `node scripts/sync-ui-common.mjs`          copies it into ui/ (extension) and ../web/static/
+// `node scripts/sync-ui-common.mjs`          copies it into ui/ (extension)
 // `node scripts/sync-ui-common.mjs --check`  exits 1 if the copies differ
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const src = new URL('../../shared/ui-common.js', import.meta.url);
 const outs = [
   ['extension/ui/ui-common.js', new URL('../ui/ui-common.js', import.meta.url)],
-  ['web/static/ui-common.js', new URL('../../web/static/ui-common.js', import.meta.url)],
 ];
 
 const lf = (s) => s.replace(/\r\n/g, '\n');

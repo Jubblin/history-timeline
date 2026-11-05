@@ -1,7 +1,7 @@
 name: CI
 
 # Which jobs run is decided by the "changes" job (see .github/scripts/changes.sh
-# and CONTRIBUTING.md): Go jobs for Go or shared changes, the extension job for
+# and CONTRIBUTING.md): the extension job for
 # extension or shared changes, nothing for docs-only changes. Jobs are skipped
 # with job-level conditions, never workflow-level path filters, so the
 # "ci-ok" check always reports and can be required.
@@ -23,7 +23,6 @@ jobs:
     name: changes
     runs-on: ubuntu-latest
     outputs:
-      go: ${{ steps.detect.outputs.go }}
       extension: ${{ steps.detect.outputs.extension }}
       javascript: ${{ steps.detect.outputs.javascript }}
       codeql: ${{ steps.detect.outputs.codeql }}
@@ -46,102 +45,6 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: sh .github/scripts/detect.sh
 
-  lint:
-    needs: changes
-    if: needs.changes.outputs.go == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: stable
-          cache: true
-      - name: gofmt
-        run: |
-          out="$(gofmt -l .)"
-          if [ -n "$out" ]; then
-            echo "These files need gofmt:"
-            echo "$out"
-            exit 1
-          fi
-      - name: go vet
-        run: go vet ./...
-      - name: go mod tidy leaves no diff
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
-
-  test:
-    needs: [changes, lint]
-    if: needs.changes.outputs.go == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        go: [stable]
-        include:
-          # Proves the oldest supported Go release still builds and tests.
-          # go.mod's go directive (1.26.0) is the real minimum, and its
-          # toolchain line names the newer release used for development, so
-          # this job pins GOTOOLCHAIN=local to stop the toolchain line from
-          # silently switching it to the newer release. Older toolchains
-          # cannot run -race binaries on current macOS, so the oldest is only
-          # checked on Linux. Bump together with go.mod when Go 1.26 goes EOL.
-          - os: ubuntu-latest
-            go: "1.26"
-            toolchain: local
-    name: test (${{ matrix.os }}, ${{ matrix.go }})
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: ${{ matrix.go }}
-          cache: true
-      - name: Never switch toolchains (the job must run the Go it names)
-        if: matrix.toolchain == 'local'
-        run: echo "GOTOOLCHAIN=local" >> "$GITHUB_ENV"
-      - name: Build (CGO off)
-        run: go build ./...
-        env:
-          CGO_ENABLED: "0"
-      - name: Test with the race detector
-        if: runner.os != 'Windows'
-        run: go test -race -count=1 ./...
-      - name: Test (race detector needs cgo, skipped on Windows)
-        if: runner.os == 'Windows'
-        run: go test -count=1 ./...
-        env:
-          CGO_ENABLED: "0"
-
-  cross-build:
-    needs: [changes, lint]
-    if: needs.changes.outputs.go == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: stable
-          cache: true
-      - name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-        run: go build -trimpath -ldflags "-s -w" -o /dev/null ./cmd/history-timeline
-        env:
-          CGO_ENABLED: "0"
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-
   extension:
     needs: changes
     if: needs.changes.outputs.extension == 'true'
@@ -155,7 +58,7 @@ jobs:
           node-version: "22"
       - name: Extension tests
         run: make extension-test
-      - name: Extension rules are in sync with internal/classify/rules.json
+      - name: Extension rules are in sync with src/classify/rules.json
         run: make extension-check
       - name: Shared UI helpers are in sync with shared/ui-common.js
         run: make ui-check
@@ -226,7 +129,7 @@ jobs:
   # failed or cancelled ones fail it.
   ci-ok:
     if: always()
-    needs: [changes, lint, test, cross-build, extension]
+    needs: [changes, extension]
     runs-on: ubuntu-latest
     steps:
       - name: Require every needed job to have passed or been skipped
