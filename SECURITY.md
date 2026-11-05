@@ -12,7 +12,7 @@ Please report vulnerabilities privately using GitHub private vulnerability repor
 
 ## Supported versions
 
-There are no tagged releases yet. Only the latest commit on `main` is supported; please check that the problem still exists there before reporting.
+The latest tagged release and the `main` branch are supported; older releases are not patched. Please check that the problem still exists in the latest release or on `main` before reporting.
 
 ## What to expect
 
@@ -36,8 +36,8 @@ This is a hobby project, so these are best-effort targets, not guarantees:
 ## Automated scanning
 
 - `govulncheck` checks the code and dependencies against the Go vulnerability database on every push, pull request and weekly.
-- CodeQL analyses the Go code and the JavaScript in `web/static` on the same schedule; results appear in the repository's code scanning alerts.
-- Renovate opens grouped minor/patch update pull requests for Go modules and GitHub Actions.
+- CodeQL analyses the Go code and the JavaScript in `web/static` and `extension/` on the same schedule; results appear in the repository's code scanning alerts.
+- Renovate opens grouped minor/patch update pull requests for Go modules, GitHub Actions and the extension's npm devDependency (`playwright-core`, exact-pinned), and it tracks the pinned `govulncheck` commit in `security.yml`. It runs `go mod tidy` after Go dependency updates.
 - Workflows use read-only permissions by default, pin actions to commit SHAs, use no secrets and never run untrusted pull request code with write access. Release archives carry build provenance attestations and a `SHA256SUMS` file.
 
 ## Scope
