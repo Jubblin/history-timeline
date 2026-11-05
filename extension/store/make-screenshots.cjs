@@ -11,9 +11,9 @@ fs.mkdirSync(out, { recursive: true });
 
 async function open(scheme) {
   const ctx = await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), 'shot-')), {
-    headless: false, channel: 'chromium', colorScheme: scheme, viewport: { width: 1280, height: 800 },
+    headless: false, channel: 'chromium', colorScheme: scheme, locale: 'en-GB', env: { ...process.env, LANGUAGE: 'en_GB', LC_ALL: 'en_GB.UTF-8' }, viewport: { width: 1280, height: 800 },
     ignoreDefaultArgs: ['--disable-extensions'],
-    args: ['--headless=new', '--no-sandbox', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`,
+    args: ['--headless=new', '--no-sandbox', '--lang=en-GB', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`,
       '--disable-features=DisableLoadExtensionCommandLineSwitch'],
   });
   let [sw] = ctx.serviceWorkers();
