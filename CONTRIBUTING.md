@@ -62,6 +62,8 @@ Scheduled and manual runs, new branches and force pushes run everything. The rel
 
   **This repo is the source of truth** for both files; the Go repo copies are downstream. If `make drift-check` reports a mismatch, update the Go repo from this one, never the reverse. A fetch failure exits 2 (the check did not run), a real mismatch exits 1 and prints a diff.
 
+  The CI `drift` job is advisory for now (`continue-on-error: true`, not in the `ci-ok` needs list). To make it blocking later, remove `continue-on-error` from the job and add `drift` to `ci-ok`'s `needs`.
+
 ## Design principles
 
 - Read-only: never modify browser history. No external requests; keep the strict CSP (no inline script or style).
