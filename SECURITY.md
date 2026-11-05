@@ -12,7 +12,7 @@ Please report vulnerabilities privately using GitHub private vulnerability repor
 
 ## Supported versions
 
-There are no tagged releases yet. Only the latest commit on `main` is supported; please check that the problem still exists there before reporting.
+Only the latest tagged release of the extension is supported; older releases do not receive security fixes. Fixes land on `main` and ship in the next release. Please check that the problem still exists in the latest release before reporting.
 
 ## What to expect
 

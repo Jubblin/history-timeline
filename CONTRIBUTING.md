@@ -32,6 +32,7 @@ The extension in `extension/` needs Node 22+ on the host. The shipped extension 
 |---|---|
 | `make extension-test` | unit tests (`node --test`), including manifest checks and the built-zip checks |
 | `make extension-check` | fails if the generated `src/classify/rules.js` against `src/classify/rules.json` is stale (`make extension-sync` fixes it) |
+| `make ui-check` | fails if `extension/ui/ui-common.js` differs from `shared/ui-common.js` (also a prerequisite of `make extension-zip`, and run in CI); `make ui-sync` regenerates it |
 | `make extension-lint` | manifest lint |
 | `make extension-zip` | reproducible zip in `dist/` |
 | `make browser-check` | Playwright checks (`chrome-check`, `ui-check`, `zip-check`); needs `cd extension && npm ci && npx playwright-core install --with-deps chromium` first |
@@ -56,7 +57,7 @@ Scheduled and manual runs, new branches and force pushes run everything. The rel
 
 - `extension/`: the Manifest V3 extension (see `extension/README.md`).
 - `shared/ui-common.js`: source of truth for UI helpers; `make ui-sync` copies it to `extension/ui/`. Also hand-synced into the Go repo ([Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app), `web/static/ui-common.js`): after changing it here, copy it there.
-- `extension/src/classify/rules.json`: source of truth for the bundled category rules; `make extension-sync` generates `rules.js` from it. The Go repo keeps a hand-synced copy (`internal/classify/rules.json`): after changing it here, copy it there and regenerate its vectors (`UPDATE_VECTORS=1 go test ./internal/classify -run TestVectorsFresh`), then copy `internal/classify/testdata/vectors.json` back to `extension/test/vectors.json`. `extension/test/filter-cases.json` is also shared with the Go repo (`internal/server/testdata/filter-cases.json`); change both together.
+- `extension/src/classify/rules.json`: source of truth for the bundled category rules; `make extension-sync` generates `rules.js` from it. The Go repo keeps a hand-synced copy (`internal/classify/rules.json`): after changing it here, copy it there and regenerate its vectors (`UPDATE_VECTORS=1 go test ./internal/classify -run TestVectorsFresh`), then copy `internal/classify/testdata/vectors.json` back to `extension/test/vectors.json`. `extension/test/filter-cases.json` is the master copy of a fixture shared with the Go repo: after changing it here, copy it to the Go repo's `internal/server/testdata/filter-cases.json` (never edit the Go copy first).
 
 ## Design principles
 
@@ -77,14 +78,19 @@ The bundled lists in `extension/src/classify/rules.json` are a heuristic that fa
 
 ## Releasing
 
-Releases are cut from `main` by pushing a version tag:
+Releases are cut from `main` by pushing a version tag. Before tagging:
+
+1. Bump `version` in `extension/manifest.json` (the tag must equal it).
+2. Update the version examples in `docs/INSTALL-EXTENSION.md`.
+3. Run `make extension-zip TAG=vX.Y.Z` to check the zip builds.
+4. Merge these changes to `main`, then tag:
 
 ```sh
 git tag -a v1.2.3 -m "v1.2.3"
 git push origin v1.2.3
 ```
 
-The `Release` workflow (`.github/workflows/release.yml`) tests and builds the Chrome extension zip (`history-timeline-extension_vX.Y.Z.zip`; the tag must equal the manifest version), writes a `SHA256SUMS` file covering it too, adds build provenance attestations, and creates a **draft** GitHub Release with generated notes, which you publish by hand. The tag is injected as the version, so `history-timeline --version` prints it.
+The `Release` workflow (`.github/workflows/release.yml`) tests and builds the Chrome extension zip (`history-timeline-extension_vX.Y.Z.zip`; the tag must equal the manifest version), writes a `SHA256SUMS` file covering it too, adds build provenance attestations, and creates a **draft** GitHub Release with generated notes, which you publish by hand.
 
 Once the workflow succeeds:
 

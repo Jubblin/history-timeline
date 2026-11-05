@@ -21,6 +21,7 @@ Full guide for the release zip: [`docs/INSTALL-EXTENSION.md`](../docs/INSTALL-EX
     **Days use the browser's local time zone.**
   - `filterVisits` (date range, end exclusive, text in url/title, domain or parent domain, transition types).
   - `createMockHistory(entries)` (ui/test-support/mock-history.js, not shipped) in-memory `chrome.history` for tests and offline/fixture mode.
+- `ui/ui-common.js` generated copy of `shared/ui-common.js` (do not edit; see "Shared UI helpers" below).
 - `scripts/make-fixture.js` deterministic synthetic history generator (10k+ visits).
 
 ## Tests
@@ -33,11 +34,15 @@ Full guide for the release zip: [`docs/INSTALL-EXTENSION.md`](../docs/INSTALL-EX
   libraries are already present). Then run `make browser-check` from the repo root (builds the zip, then runs `chrome-check.cjs`,
   `ui-check.cjs` and `zip-check.cjs`), or run one script directly from `extension/`, e.g. `node scripts/chrome-check.cjs`.
   Chromium runs with `--headless=new`, so no X server or xvfb is needed. `playwright-core` is a devDependency only; the zip
-  allowlist never includes it. In CI these run in the advisory `extension-browser` job.
+  allowlist never includes it. In CI these run in the advisory `extension-browser` job (promotion rule: [CONTRIBUTING.md](../CONTRIBUTING.md#promoting-the-browser-checks)).
 
 ## Classifier
 
 `src/classify/index.js` is the public interface (`CATEGORIES`, `createClassifier`, `parseUserRules`, `loadBundledRules`; user rules text lives in `chrome.storage.local` key `userRulesText`). The six categories, rules and precedence are defined in `src/classify/rules.json`, the single source of truth; `make extension-sync` generates `src/classify/rules.js` from it and `make extension-check` fails if they differ. `test/vectors.json` holds recorded classification vectors (originally produced by the Go classifier, which now lives in a separate repository) and the JS tests must match it 100%. User rules: the JS parser is exact-case and the last duplicate top-level key wins.
+
+## Shared UI helpers
+
+`ui/ui-common.js` is generated from `shared/ui-common.js` by `scripts/sync-ui-common.mjs`. Edit only the shared file, then run `make ui-sync`; `make ui-check` fails if a copy differs. `test/filter-cases.json` is the master copy of a filter fixture shared with the separate Go repository ([Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app)): after changing it here, copy it to that repo's `internal/server/testdata/filter-cases.json` (never edit the Go copy first).
 
 ## Timeline UI (`ui/`)
 - `timeline.html` + `ui/app.js` (view) + `ui/model.js` (pure, unit-tested filtering/layout/CSV) + `ui/timeline.css` (extension styles).
@@ -50,4 +55,4 @@ Full guide for the release zip: [`docs/INSTALL-EXTENSION.md`](../docs/INSTALL-EX
 - `make extension-zip` (optionally `TAG=vX.Y.Z`, which must equal the manifest version) writes `dist/history-timeline-extension_v<version>.zip`. `make extension-lint` checks the manifest alone.
 - The zip is built from an **allowlist** in `scripts/build-zip.mjs` (`manifest.json`, `timeline.html`, `icons/`, `src/`, `ui/`, minus `ui/test-support/`, the duplicate `src/classify/rules.json` and source maps). Tests, scripts, `store/`, README and `package.json` are never included, so a stray dev file cannot leak in. Entries are sorted with fixed timestamps and modes, so two builds are byte-identical.
 - `test/package.test.js` checks the built zip (reproducible, no excluded files, no fixture code or URL-parameter reads, every import resolves inside the zip). `scripts/zip-check.cjs <zip>` loads the zip contents in Chromium and confirms `?fixture=1` does nothing.
-- Web Store text, privacy policy, icons and screenshots: `store/` (`CHECKLIST.md` lists what is still manual). Regenerate icons with `python3 -I store/make-icons.py icons` and screenshots with `store/make-screenshots.cjs` (needs Playwright's Chromium; loads the unpacked tree in fixture mode).
+- Web Store text, privacy policy, icons and screenshots: `store/` (`CHECKLIST.md` lists what is still manual). Regenerate icons with `python3 -I store/make-icons.py icons` and screenshots with `store/make-screenshots.cjs` (needs `npm ci` in `extension/` and Playwright's Chromium; loads the unpacked tree in fixture mode).

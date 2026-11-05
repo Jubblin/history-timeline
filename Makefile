@@ -3,7 +3,7 @@
 
 .PHONY: extension-test extension-sync extension-check ui-sync ui-check extension-lint extension-zip browser-check
 
-# Chrome extension tests: Node >= 22 on the host, no dependencies.
+# Chrome extension tests: Node >= 22 on the host, no dependencies (browser-check needs npm ci, below).
 extension-test:
 	cd extension && node --test "test/*.test.js"
 

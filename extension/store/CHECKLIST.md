@@ -1,6 +1,6 @@
 # Web Store submission checklist for Browsing History Timeline
 
-Status as of this branch: the package, assets and text are ready; **nothing has been submitted** and nothing below under "You must do" has been done.
+Status as of v0.4.0: the package, assets and text are ready; **nothing has been submitted** and nothing below under "You must do" has been done.
 
 ## Done in this repository
 - [x] Manifest V3, minimal permissions (`history`, `storage`), no host permissions, no remote code, strict CSP.
@@ -10,6 +10,7 @@ Status as of this branch: the package, assets and text are ready; **nothing has 
 - [x] 4 screenshots at 1280x800 from synthetic fixture data (`screenshots/`).
 - [x] Privacy policy text (`PRIVACY.md`) consistent with the CSP and permissions.
 - [x] Listing text, single-purpose statement and permission justifications (`LISTING.md`).
+- [x] Shared UI helper sync check (`make ui-check`) and an advisory `extension-browser` CI job for the Playwright checks.
 - [x] Release workflow attaches the zip and checksum to the draft release.
 
 ## You must do (not done)
