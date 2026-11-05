@@ -32,6 +32,7 @@ The extension in `extension/` needs Node 22+ on the host. The shipped extension 
 |---|---|
 | `make extension-test` | unit tests (`node --test`), including manifest checks and the built-zip checks |
 | `make extension-check` | fails if the generated `src/classify/rules.js` against `src/classify/rules.json` is stale (`make extension-sync` fixes it) |
+| `make drift-check` | compares `extension/test/filter-cases.json` and `extension/src/classify/rules.json` (normalised JSON) with the copies on the `main` branch of Jubblin/history-timeline-app; needs network, `DRIFT_REF=<branch\|sha>` pins another revision. Advisory in CI (`drift` job, not part of `ci-ok`) |
 | `make ui-check` | fails if `extension/ui/ui-common.js` differs from `shared/ui-common.js` (also a prerequisite of `make extension-zip`, and run in CI); `make ui-sync` regenerates it |
 | `make extension-lint` | manifest lint |
 | `make extension-zip` | reproducible zip in `dist/` |
@@ -58,6 +59,10 @@ Scheduled and manual runs, new branches and force pushes run everything. The rel
 - `extension/`: the Manifest V3 extension (see `extension/README.md`).
 - `shared/ui-common.js`: source of truth for UI helpers; `make ui-sync` copies it to `extension/ui/`. Also hand-synced into the Go repo ([Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app), `web/static/ui-common.js`): after changing it here, copy it there.
 - `extension/src/classify/rules.json`: source of truth for the bundled category rules; `make extension-sync` generates `rules.js` from it. The Go repo keeps a hand-synced copy (`internal/classify/rules.json`): after changing it here, copy it there and regenerate its vectors (`UPDATE_VECTORS=1 go test ./internal/classify -run TestVectorsFresh`), then copy `internal/classify/testdata/vectors.json` back to `extension/test/vectors.json`. `extension/test/filter-cases.json` is the master copy of a fixture shared with the Go repo: after changing it here, copy it to the Go repo's `internal/server/testdata/filter-cases.json` (never edit the Go copy first).
+
+  **This repo is the source of truth** for both files; the Go repo copies are downstream. If `make drift-check` reports a mismatch, update the Go repo from this one, never the reverse. A fetch failure exits 2 (the check did not run), a real mismatch exits 1 and prints a diff.
+
+  The CI `drift` job is advisory for now (`continue-on-error: true`, not in the `ci-ok` needs list). To make it blocking later, remove `continue-on-error` from the job and add `drift` to `ci-ok`'s `needs`.
 
 ## Design principles
 
