@@ -24,7 +24,7 @@ cross:
 	GOOS=darwin  GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o dist/history-timeline-darwin-amd64 ./cmd/history-timeline
 	GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o dist/history-timeline-windows-amd64.exe ./cmd/history-timeline
 
-# Chrome extension tests: Node >= 22 on the host, no dependencies.
+# Chrome extension tests: Node >= 22 on the host, no dependencies (browser-check needs npm ci, below).
 extension-test:
 	cd extension && node --test "test/*.test.js"
 
