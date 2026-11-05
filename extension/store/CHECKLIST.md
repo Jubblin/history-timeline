@@ -1,6 +1,6 @@
 # Web Store submission checklist for Browsing History Timeline
 
-Status as of v0.4.0: the package, assets and text are ready; **nothing has been submitted** and nothing below under "You must do" has been done.
+Status as of v0.5.0: the package, assets and text are ready; **nothing has been submitted** and nothing below under "You must do" has been done.
 
 ## Done in this repository
 - [x] Manifest V3, minimal permissions (`history`, `storage`), no host permissions, no remote code, strict CSP.
