@@ -29,7 +29,7 @@ Option 1: the devcontainer on a local k3s cluster, through DevPod (see [.devcont
 
 ```
 export KUBECONFIG=$HOME/.kube/config
-make dev-up       # create/start the pod (Go 1.27)
+make dev-up       # create/start the pod (Go toolchain from the dev image)
 make dev-shell    # shell into it
 make dev-down     # delete the pod, volume and namespace
 ```
@@ -57,11 +57,22 @@ The extension in `extension/` needs Node 22+ on the host. The shipped extension 
 | `make extension-check` | fails if the extension's copy of `internal/classify/rules.json` is stale (`make extension-sync` fixes it) |
 | `make extension-lint` | manifest lint |
 | `make extension-zip` | reproducible zip in `dist/` |
+| `make ui-check` | fails if `extension/ui/ui-common.js` or `web/static/ui-common.js` differs from `shared/ui-common.js` (also a prerequisite of `make extension-zip`, and run in CI) |
+| `make ui-sync` | regenerates both copies from `shared/ui-common.js` |
 | `make browser-check` | Playwright checks (`chrome-check`, `ui-check`, `zip-check`); needs `cd extension && npm ci && npx playwright-core install --with-deps chromium` first |
 
 Browser checks (`extension/scripts/chrome-check.cjs`, `ui-check.cjs`, `zip-check.cjs`) need `playwright-core` and its full Chromium (branded Chrome ignores `--load-extension`); install with `npm ci` in `extension/` as above and see `extension/README.md`. They use synthetic fixture data only. Never put real history in extension tests or screenshots. Anything for tests (stub classifier, mock history, fixture page) lives in `extension/ui/test-support/`, which must never be shipped or imported from shipped code; the zip test enforces that.
 
 Try the UI with `make run-fixture` and open the URL it prints (it contains the per-run access token). With curl, send `-H "X-History-Timeline-Token: <token>"`. The token cookie is `Secure`, so use a Chromium-based browser or Firefox for the UI (Safari does not send Secure cookies over http); the cookie must stay `Secure`.
+
+### Promoting the browser checks
+
+The `extension-browser` CI job runs the Playwright checks and is **advisory**: it has `continue-on-error: true` and is not in the `ci-ok` `needs` list, so a failure shows on the pull request but cannot fail `ci-ok`. It follows the same path filter as the `extension` job, so docs-only changes skip it.
+
+Promotion rule: once the job has **10 consecutive green runs on `main`** (count only runs where it actually executed, not skipped), make it blocking with two edits in `.github/workflows/ci.yml`:
+
+1. Remove `continue-on-error: true` from the `extension-browser` job.
+2. Add `extension-browser` to the `ci-ok` job's `needs` list. Its existing result loop then requires `success` or `skipped`, so no other change is needed.
 
 ### Which CI jobs run
 
@@ -77,6 +88,8 @@ A first job, `changes`, looks at the files a pull request (or a push to `main`) 
 | root `*.md`, `LICENSE`, `.devcontainer/**`, `extension/store/**`, `extension/**/*.md` | no | no | no |
 | anything else, or an empty or unknown diff | yes | yes | yes |
 
+`shared/**` has no row of its own: it falls under "anything else", so it runs everything. The advisory `extension-browser` job is not part of this table or of `ci-ok`; see [Promoting the browser checks](#promoting-the-browser-checks).
+
 Scheduled and manual runs, new branches and force pushes run everything. The release workflow (tags `v*`) always builds and tests everything.
 
 `ci-ok` (in CI) and `security-ok` (in Security) always run and pass when every job they depend on passed or was skipped, so each is a single stable check name to require in branch protection. The rules live in `.github/scripts/changes.sh`; `.github/scripts/changes_test.sh` tests them (run `sh .github/scripts/changes_test.sh`) and CI runs it, so update both when you add a new kind of path.
@@ -88,14 +101,16 @@ Scheduled and manual runs, new branches and force pushes run everything. The rel
 - `internal/history`: profile discovery, read-only copy of the `History` database, queries and aggregations.
 - `internal/classify`: sensitive-site categories and the bundled rules (`rules.json`).
 - `internal/server`: the localhost HTTP server and JSON API.
-- `web/`: the embedded UI (`web/static/`).
+- `web/`: the embedded UI (`web/static/`). `web/static/ui-common.js` is generated; do not edit it.
+- `shared/`: source of truth for `ui-common.js`; `make ui-sync` copies it to `web/static/` and `extension/ui/` (the copies say "Do not edit").
+- `extension/`: the Chrome extension (see `extension/README.md`). `extension/test/filter-cases.json` is a shared filter fixture run by both `internal/server/filter_cases_test.go` and `extension/test/filter-cases.test.js`.
 
 ## Design principles
 
 - Read-only: never open or modify the original `History` database; work on a temporary copy that is deleted afterwards (and unlinked right after opening where the OS allows). Refuse symlinks.
 - Localhost only: bind `127.0.0.1` and reject other `Host` headers and cross-site requests, and require the per-run access token on every request (it must stay impossible to disable). Keep the strict CSP: no inline script or style, no `unsafe-inline`. No external requests from the server or the UI.
 - Classification is offline and uses only the URL. Do not add network calls, and never log URLs, titles or paths.
-- Dependencies: the Go standard library plus the single SQLite driver (`modernc.org/sqlite`). Discuss before adding another.
+- Dependencies: the Go standard library plus the single SQLite driver (`modernc.org/sqlite`) (Go; the extension's only npm dependency is the `playwright-core` devDependency). Discuss before adding another.
 - UI: render history data with `textContent` only (never `innerHTML`); history titles and URLs are untrusted input.
 - JSON field names are camelCase.
 
@@ -111,7 +126,12 @@ The bundled lists in `internal/classify/rules.json` are a heuristic that favours
 
 ## Releasing
 
-Releases are cut from `main` by pushing a version tag:
+Releases are cut from `main` by pushing a version tag. Before tagging:
+
+1. Bump `version` in `extension/manifest.json` (the tag must equal it).
+2. Update the version examples in `docs/INSTALL-EXTENSION.md`.
+3. Run `make extension-zip TAG=vX.Y.Z` to check the zip builds.
+4. Merge these changes to `main`, then tag:
 
 ```sh
 git tag -a v1.2.3 -m "v1.2.3"
@@ -141,12 +161,3 @@ Before opening a pull request:
 - [ ] small, focused commits with clear messages
 
 By contributing you agree that your contributions are licensed under the MIT licence (see [LICENSE](LICENSE)).
-
-#### Promoting the browser checks
-
-The `extension-browser` CI job runs the Playwright checks and is **advisory**: it has `continue-on-error: true` and is not in the `ci-ok` `needs` list, so a failure shows on the pull request but cannot fail `ci-ok`. It follows the same path filter as the `extension` job, so docs-only changes skip it.
-
-Promotion rule: once the job has **10 consecutive green runs on `main`** (count only runs where it actually executed, not skipped), make it blocking with two edits in `.github/workflows/ci.yml`:
-
-1. Remove `continue-on-error: true` from the `extension-browser` job.
-2. Add `extension-browser` to the `ci-ok` job's `needs` list. Its existing result loop then requires `success` or `skipped`, so no other change is needed.
