@@ -1,8 +1,7 @@
 name: Security
 
 # Which jobs run is decided by the "changes" job (see .github/scripts/changes.sh
-# and CONTRIBUTING.md): Go jobs for Go or shared changes, the extension job for
-# extension or shared changes, nothing for docs-only changes. Jobs are skipped
+# and CONTRIBUTING.md): CodeQL for JavaScript changes, nothing for docs-only changes. Jobs are skipped
 # with job-level conditions, never workflow-level path filters, so the
 # "security-ok" check always reports and can be required.
 
@@ -25,7 +24,6 @@ jobs:
     name: changes
     runs-on: ubuntu-latest
     outputs:
-      go: ${{ steps.detect.outputs.go }}
       extension: ${{ steps.detect.outputs.extension }}
       javascript: ${{ steps.detect.outputs.javascript }}
       codeql: ${{ steps.detect.outputs.codeql }}
@@ -48,25 +46,6 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: sh .github/scripts/detect.sh
 
-  govulncheck:
-    needs: changes
-    if: needs.changes.outputs.go == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: stable
-          cache: true
-      - name: govulncheck
-        # Pinned to a commit (v1.1.4, the latest tag, panics on current Go:
-        # its golang.org/x/tools cannot build SSA for the newest stdlib).
-        # Bump together with the Go toolchain.
-        # renovate: datasource=git-refs depName=https://go.googlesource.com/vuln currentValue=master
-        run: go run golang.org/x/vuln/cmd/govulncheck@e672cbe8fbc8c76e28fcb6db0efd9ce354e0dac5 ./...
-
   codeql:
     needs: changes
     if: needs.changes.outputs.codeql != '[]'
@@ -82,22 +61,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        if: matrix.language == 'go'
-        with:
-          go-version-file: go.mod
-          cache: true
       - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.language == 'go' && 'autobuild' || 'none' }}
+          build-mode: none
       - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           category: "/language:${{ matrix.language }}"
 
   security-ok:
     if: always()
-    needs: [changes, govulncheck, codeql]
+    needs: [changes, codeql]
     runs-on: ubuntu-latest
     steps:
       - name: Require every needed job to have passed or been skipped

@@ -107,4 +107,4 @@ On `chrome://extensions`, click **Remove** on the card, then delete the folder. 
 
 ## 11. Chromebooks
 
-This is the way to audit the history of ChromeOS's own Chrome, which the Linux version of the app cannot read. Follow the steps above in ChromeOS Chrome. See the [Chromebook section of the README](../README.md#chromebook-chromeos) for the Linux-container route, which suits other uses.
+This is the way to audit the history of ChromeOS's own Chrome, which the standalone Go app cannot read. Follow the steps above in ChromeOS Chrome. The standalone Go app ([Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app)) has a Linux-container route for Chromebooks, which suits other uses.

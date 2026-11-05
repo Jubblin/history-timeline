@@ -1,6 +1,6 @@
 #!/bin/sh
 # Work out which parts of the repository a workflow run touches and write the
-# result to $GITHUB_OUTPUT (go, extension, javascript, codeql). Inputs come in
+# result to $GITHUB_OUTPUT (extension, javascript, codeql). Inputs come in
 # as environment variables only: EVENT_NAME, BASE_SHA, HEAD_SHA, BEFORE_SHA.
 #
 # pull_request: files changed between the PR's merge base and its head.
@@ -32,9 +32,8 @@ result=$(printf '%s\n' "$list" | sh "$here/changes.sh")
 
 # CodeQL languages to analyse, as a JSON array for the job matrix.
 codeql=
-case $result in *go=true*) codeql='"go"' ;; esac
 case $result in
-*javascript=true*) codeql="${codeql:+$codeql,}\"javascript-typescript\"" ;;
+*javascript=true*) codeql='"javascript-typescript"' ;;
 esac
 
 out=$(printf '%s\ncodeql=[%s]\n' "$result" "$codeql")

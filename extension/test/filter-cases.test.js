@@ -1,5 +1,4 @@
-// Runs the shared filter cases (filter-cases.json, also run by internal/server/filter_cases_test.go)
-// through applyFilters so the in-browser filtering cannot drift from the server's.
+// Runs the filter cases (filter-cases.json) through applyFilters.
 process.env.TZ = 'UTC'; // the fixture's day boundaries are UTC; applyFilters uses local days
 import test from 'node:test';
 import assert from 'node:assert/strict';
