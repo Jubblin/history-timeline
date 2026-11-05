@@ -29,6 +29,8 @@ Open the URL the server prints (it ends in `/?token=...`; the token is random pe
 | `make cross` | binaries for linux/amd64, darwin/arm64, darwin/amd64, windows/amd64 in `dist/` |
 | `make fixture` | generates `./fixture` (flags: `go run ./cmd/make-fixture -out DIR -days 90 -per-day 40 -seed 1`) |
 
+Extension targets (`extension-zip`, `browser-check`, ...): see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## macOS setup
 
 macOS denies terminal apps access to other apps' data under `~/Library/Application Support` until you grant it, so a first run against real profiles can fail with `permission denied`. These steps use the release archives (the exact menu names may differ between macOS versions; System Settings was reorganised in macOS 13).
@@ -111,7 +113,7 @@ Development runs in a pod on the local k3s cluster through DevPod; see [.devcont
 
 ```
 export KUBECONFIG=$HOME/.kube/config
-make dev-up                 # create/start the pod (Go 1.27)
+make dev-up                 # create/start the pod (Go toolchain from the dev image)
 devpod ssh history-timeline   # shell in the pod; run make test / make build there
 # serve from the pod and reach it on the host:
 devpod ssh history-timeline --command 'cd /workspaces/history-timeline && make run-fixture'   # port 8080 is forwarded
@@ -130,7 +132,7 @@ go run ./cmd/history-timeline [--profile PATH] [--port N] [--no-open]
 
 Binds `127.0.0.1` only (default port 8080, `0` = random) and opens the browser unless `--no-open`.
 `--profile` accepts a profile dir, a user-data dir, or a `History` file; without it, profiles are auto-discovered.
-The UI in `web/static/` is embedded into the binary.
+The UI in `web/static/` is embedded into the binary. `web/static/ui-common.js` is generated from `shared/ui-common.js`; edit the shared file and run `make ui-sync` (`make ui-check` fails if they differ).
 
 ## JSON API
 
