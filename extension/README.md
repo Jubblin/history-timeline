@@ -42,7 +42,7 @@ Full guide for the release zip: [`docs/INSTALL-EXTENSION.md`](../docs/INSTALL-EX
 
 ## Shared UI helpers
 
-`ui/ui-common.js` is generated from `shared/ui-common.js` by `scripts/sync-ui-common.mjs`. Edit only the shared file, then run `make ui-sync`; `make ui-check` fails if a copy differs. `test/filter-cases.json` is a filter fixture shared with the separate Go repository ([Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app)); change both together.
+`ui/ui-common.js` is generated from `shared/ui-common.js` by `scripts/sync-ui-common.mjs`. Edit only the shared file, then run `make ui-sync`; `make ui-check` fails if a copy differs. `test/filter-cases.json` is the master copy of a filter fixture shared with the separate Go repository ([Jubblin/history-timeline-app](https://github.com/Jubblin/history-timeline-app)): after changing it here, copy it to that repo's `internal/server/testdata/filter-cases.json` (never edit the Go copy first).
 
 ## Timeline UI (`ui/`)
 - `timeline.html` + `ui/app.js` (view) + `ui/model.js` (pure, unit-tested filtering/layout/CSV) + `ui/timeline.css` (extension styles).
