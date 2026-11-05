@@ -1,6 +1,6 @@
 # Privacy policy: Browsing History Timeline
 
-_Last updated: see the git history of this file._
+_Last updated: 5 November 2026._
 
 Browsing History Timeline is a browser extension that shows you an audit timeline of your own browsing history, so you can see what a profile has recorded and which visits look sensitive.
 
@@ -27,4 +27,4 @@ Uninstalling the extension deletes everything it stored. You can also clear your
 
 ## Contact and changes
 
-Questions or concerns: open an issue on the project's GitHub repository (never include real browsing history), or use the private vulnerability reporting described in `SECURITY.md` for security problems. Changes to this policy will be committed to this file with their date in the git history.
+Questions or concerns: open an issue on the project's GitHub repository (never include real browsing history), or use the private vulnerability reporting described in `SECURITY.md` for security problems. You can also email 14090755+Jubblin@users.noreply.github.com (never include real browsing history). Changes to this policy will be committed to this file with their date in the git history.
