@@ -1,11 +1,16 @@
 # Extension development targets.
 
 
-.PHONY: extension-test extension-sync extension-check ui-sync ui-check extension-lint extension-zip browser-check
+.PHONY: drift-check extension-test extension-sync extension-check ui-sync ui-check extension-lint extension-zip browser-check
 
 # Chrome extension tests: Node >= 22 on the host, no dependencies (browser-check needs npm ci, below).
 extension-test:
 	cd extension && node --test "test/*.test.js"
+
+# Compare the master fixture and rules with the downstream copies in Jubblin/history-timeline-app (needs network).
+# DRIFT_REF=<branch|sha> pins the app repo revision (default: main).
+drift-check:
+	node extension/scripts/check-drift.mjs
 
 # Generate extension/src/classify/rules.js from rules.json (source of truth).
 extension-sync:

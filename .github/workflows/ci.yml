@@ -125,6 +125,29 @@ jobs:
       - name: Browser checks (chrome-check, ui-check, zip-check)
         run: make browser-check
 
+  # Compares the master fixture/rules with the downstream copies in
+  # Jubblin/history-timeline-app (public, anonymous HTTPS, branch main).
+  # ADVISORY: continue-on-error is set and this job is deliberately NOT in the
+  # ci-ok needs list, so network flakiness or a not-yet-synced app repo cannot
+  # block merges. A fetch failure exits 2 and shows as a failed (not green) step.
+  drift:
+    needs: changes
+    if: needs.changes.outputs.extension == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - name: Fixture and rules match the app repo copies
+        run: make drift-check
+
   # One stable check name to require in branch protection. Skipped jobs pass;
   # failed or cancelled ones fail it.
   ci-ok:
