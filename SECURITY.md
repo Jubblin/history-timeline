@@ -12,7 +12,7 @@ Please report vulnerabilities privately using GitHub private vulnerability repor
 
 ## Supported versions
 
-The latest tagged release and the `main` branch are supported; older releases are not patched. Please check that the problem still exists in the latest release or on `main` before reporting.
+Only the latest tagged release is supported; older releases do not receive security fixes. Fixes land on `main` and ship in the next release. Please check that the problem still exists in the latest release before reporting.
 
 ## What to expect
 
