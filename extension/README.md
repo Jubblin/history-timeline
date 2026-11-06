@@ -2,7 +2,7 @@
 
 An audit timeline for the browsing history of the profile it is installed in. It reads history through `chrome.history`, makes no network requests, and requests only the `history` and `storage` permissions (`storage` holds the optional user classification rules in `chrome.storage.local`; nothing leaves the device). Incognito browsing is not recorded by Chrome and is not accessible to the extension.
 
-Status: data layer, classifier, timeline UI and packaging. Web Store assets and submission notes are in `store/`.
+Status: data layer, classifier, timeline UI and packaging. Available on the [Chrome Web Store](https://chromewebstore.google.com/detail/ffclondmobadghahcmljicbjofpmmjhb) (version 0.5.0 accepted). Web Store assets and submission notes are in `store/`.
 
 ## Load unpacked
 Full guide for the release zip: [`docs/INSTALL-EXTENSION.md`](../docs/INSTALL-EXTENSION.md). In short: in `chrome://extensions` enable Developer mode, choose "Load unpacked" and select this `extension/` folder (or, for the release zip, a new EMPTY folder you unzipped it into), then click the toolbar button to open the timeline.

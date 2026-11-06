@@ -1,6 +1,6 @@
 # Web Store submission checklist for Browsing History Timeline
 
-Status as of v0.6.0: the package, assets and text are ready; **nothing has been submitted** and nothing below under "You must do" has been done.
+Status: the extension is live on the [Chrome Web Store](https://chromewebstore.google.com/detail/ffclondmobadghahcmljicbjofpmmjhb) (version 0.5.0 accepted; later releases are uploaded by hand until upload automation is switched on). The items below are kept as a record and for future submissions.
 
 Release note for 0.6.0: the CSV export's first column header is now `time_utc` (was `time`) and the file starts with a UTF-8 BOM; scripts reading the old `time` column must be updated.
 
@@ -15,13 +15,13 @@ Release note for 0.6.0: the CSV export's first column header is now `time_utc` (
 - [x] Shared UI helper sync check (`make ui-check`) and an advisory `extension-browser` CI job for the Playwright checks.
 - [x] Release workflow attaches the zip and checksum to the draft release.
 
-## You must do (not done)
-- [ ] Register a Chrome Web Store developer account and pay the one-time registration fee (check the current amount in the dashboard); verify the account (2-step verification is required).
-- [ ] Publish `PRIVACY.md` at a public URL (for example its GitHub page on the default branch once merged) and enter that URL in the dashboard's Privacy tab. The store requires a URL, not a file.
-- [ ] Decide the publisher identity (individual or group) and the support contact shown on the listing. No personal names or emails are in this repository; add them in the dashboard only if you choose to.
-- [ ] Upload the zip from the release (check `sha256sum -c`), fill the Store listing and Privacy practices tabs from `LISTING.md`, upload icons/screenshots (store icon is `icons/icon-128.png`; the optional small promo tile 440x280 is `extension/store/promo-tile-440x280.png` and the marquee 1400x560 is `promo-marquee-1400x560.png`, both built by `make-promo-tile.py`).
-- [ ] Choose visibility (public, unlisted or private), regions and pricing (free).
-- [ ] Submit for review. Review of an extension that requests `history` can take longer and may ask questions; answer with the justification above. Expect to resubmit with a higher version number after any change (the manifest `version` must increase for each upload).
+## Submission steps (done for 0.5.0)
+- [x] Register a Chrome Web Store developer account and pay the one-time registration fee (check the current amount in the dashboard); verify the account (2-step verification is required).
+- [x] Publish `PRIVACY.md` at a public URL (for example its GitHub page on the default branch once merged) and enter that URL in the dashboard's Privacy tab. The store requires a URL, not a file.
+- [x] Decide the publisher identity (individual or group) and the support contact shown on the listing. No personal names or emails are in this repository; add them in the dashboard only if you choose to.
+- [x] Upload the zip from the release (check `sha256sum -c`), fill the Store listing and Privacy practices tabs from `LISTING.md`, upload icons/screenshots (store icon is `icons/icon-128.png`; the optional small promo tile 440x280 is `extension/store/promo-tile-440x280.png` and the marquee 1400x560 is `promo-marquee-1400x560.png`, both built by `make-promo-tile.py`).
+- [x] Choose visibility (public, unlisted or private), regions and pricing (free).
+- [x] Submit for review. Review of an extension that requests `history` can take longer and may ask questions; answer with the justification above. Expect to resubmit with a higher version number after any change (the manifest `version` must increase for each upload).
 - [ ] Test the uploaded package from the store (or the zip) on a real, branded Chrome profile and on ChromeOS if you want to claim it works there; only Chromium via automation has been tested so far.
 
 ## Not done / known gaps
