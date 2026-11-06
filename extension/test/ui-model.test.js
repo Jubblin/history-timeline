@@ -121,3 +121,36 @@ test('describeLoadError gives plain wording and never the raw JS message', () =>
   for (const m of [ERROR_NO_ACCESS, ERROR_GENERIC]) assert.doesNotMatch(m, /Cannot read|undefined|boom/);
   assert.match(ERROR_NO_ACCESS, /Permissions/);
 });
+
+test('reversed date range is detected and explained', async () => {
+  const { isReversedRange, RANGE_REVERSED } = await import('../ui/model.js');
+  assert.equal(isReversedRange('2025-06-10', '2025-06-01'), true);
+  assert.equal(isReversedRange('2025-06-01', '2025-06-10'), false);
+  assert.equal(isReversedRange('2025-06-01', '2025-06-01'), false);
+  assert.equal(isReversedRange('', '2025-06-01'), false);
+  assert.match(RANGE_REVERSED, /earlier than/);
+  const vs = await data();
+  assert.deepEqual(applyFilters(vs, { start: '2025-06-11', end: '2025-06-10', cats: new Set() }, false), []);
+});
+
+test('hide-mode search gives a specific empty message', async () => {
+  const { emptyFilteredMessage } = await import('../ui/model.js');
+  const vs = await data();
+  const f = { text: 'slots', domain: '', cats: new Set() };
+  const hiddenCount = applyFilters(vs, f, false).filter((v) => v.categories.length).length - applyFilters(vs, f, true).filter((v) => v.categories.length).length;
+  assert.equal(hiddenCount, 1);
+  const m = emptyFilteredMessage({ hide: true, hiddenCount, searching: true });
+  assert.match(m, /1 sensitive visit would match but is hidden and not searched/);
+  assert.match(emptyFilteredMessage({ hide: true, hiddenCount: 3, searching: true }), /3 sensitive visits would match but are hidden/);
+  assert.equal(emptyFilteredMessage({ hide: true, hiddenCount: 0, searching: true }), EMPTY_FILTERED);
+  assert.equal(emptyFilteredMessage({ hide: false, hiddenCount: 2, searching: true }), EMPTY_FILTERED);
+  assert.equal(emptyFilteredMessage({ hide: true, hiddenCount: 2, searching: false }), EMPTY_FILTERED);
+});
+
+test('every transition has a plain label', async () => {
+  const { transitionLabel, TRANSITION_LABELS } = await import('../ui/model.js');
+  const { TRANSITIONS } = await import('../src/history/index.js');
+  for (const t of TRANSITIONS) assert.ok(TRANSITION_LABELS[t] && !/_/.test(TRANSITION_LABELS[t]), t);
+  assert.equal(transitionLabel('typed'), 'Typed address');
+  assert.equal(transitionLabel('mystery'), 'mystery');
+});

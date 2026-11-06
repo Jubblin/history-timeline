@@ -122,3 +122,11 @@ button.vtitle.masked-btn{border:0;background:none;padding:0;text-align:left}
 .session-head{display:block}
 .chart-wrap{min-width:0}
 @media (max-width:480px){.top{flex-wrap:wrap;padding:8px 12px}main{padding:12px}.filters label.grow{flex-basis:100%}}
+
+.privacy-line{margin:0;padding:6px 20px;font-size:13px;color:var(--muted)}
+.flag-help{align-self:end;font-size:13px;color:var(--muted);padding-bottom:6px}
+.flag-help summary{cursor:pointer}
+.flag-help p{margin:4px 0 0;max-width:34ch}
+.range-msg{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--flag);font-size:14px}
+.range-msg[hidden]{display:none}
+input[aria-invalid="true"]{border-color:var(--flag);outline:1px solid var(--flag)}

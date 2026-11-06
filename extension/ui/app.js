@@ -3,7 +3,7 @@
 import { loadVisits, TRANSITIONS } from '../src/history/index.js';
 import { el, pad, localTime, fmtDay, num, debounce, catBadge as makeCatBadge, downloadBlob, buildTransitionFilter, fillRow as sharedFillRow } from './ui-common.js';
 import { CATEGORIES, createClassifier, parseUserRules, loadBundledRules } from './classify-import.js';
-import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, describeLoadError, viewState, isMasked, annotate, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv } from './model.js';
+import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, RANGE_REVERSED, isReversedRange, emptyFilteredMessage, transitionLabel, describeLoadError, viewState, isMasked, annotate, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv } from './model.js';
 
 const PAGE = 200;
 const HIDE_KEY = 'history-timeline.hideSensitive';
@@ -104,11 +104,15 @@ function renderChips(visits) {
 
 const toView = (v) => ({
   id: v.visitId, timeMs: v.time, iso: new Date(v.time).toISOString(), url: v.url, title: v.title, domain: v.domain,
-  transition: v.transition, categories: v.categories, durationMs: 0,
+  transition: transitionLabel(v.transition), categories: v.categories, durationMs: 0,
   masked: isMasked(v, st.hide, st.revealed), hide: st.hide,
   onToggleReveal: () => { if (st.revealed.has(v.visitId)) st.revealed.delete(v.visitId); else st.revealed.add(v.visitId); },
 });
-const fillRow = (row, v) => sharedFillRow(row, () => toView(v), catBadge);
+const fillRow = (row, v) => {
+  sharedFillRow(row, () => toView(v), catBadge);
+  const tr = row.querySelector('.tr');
+  if (tr) tr.title = v.transition;
+};
 
 function renderMore(count) {
   const tl = $('timeline');
@@ -180,7 +184,12 @@ function renderState() {
   } else if (kind === 'empty-history') {
     msg.textContent = EMPTY_HISTORY;
     act.textContent = 'Reload'; act.hidden = false; act.onclick = () => location.reload();
-  } else msg.textContent = EMPTY_FILTERED;
+  } else {
+    const f = filters();
+    const searching = !!(f.text.trim() || f.domain.trim());
+    const hiddenCount = st.hide && searching ? applyFilters(st.all, f, false).filter((v) => v.categories.length).length - st.filtered.filter((v) => v.categories.length).length : 0;
+    msg.textContent = isReversedRange(f.start, f.end) ? RANGE_REVERSED : emptyFilteredMessage({ hide: st.hide, hiddenCount, searching });
+  }
 }
 
 function checkSentinel() {
@@ -194,8 +203,16 @@ function updateMaskNote() {
 
 // Recompute everything from st.all. keepCount keeps already-rendered rows when
 // background loading adds visits.
+function updateRangeNote() {
+  const bad = isReversedRange($('f-start').value, $('f-end').value);
+  $('range-msg').hidden = !bad;
+  $('range-msg').textContent = bad ? RANGE_REVERSED : '';
+  for (const id of ['f-start', 'f-end']) { if (bad) $(id).setAttribute('aria-invalid', 'true'); else $(id).removeAttribute('aria-invalid'); }
+}
+
 function refresh({ keepCount = false } = {}) {
   updateMaskNote();
+  updateRangeNote();
   const f = filters();
   const prev = keepCount ? st.rendered : 0;
   const inRange = applyFilters(st.all, { ...f, cats: null, transitions: null }, st.hide, { ignoreTextDomain: true });
@@ -315,6 +332,11 @@ function exportCsv() {
 
 function wire() {
   buildTransitionFilter($('f-trans'), TRANSITIONS, () => refresh());
+  for (const l of $('f-trans').querySelectorAll('label')) {
+    const raw = l.querySelector('input').value;
+    l.lastChild.textContent = transitionLabel(raw);
+    l.title = raw;
+  }
   $('filters').addEventListener('submit', (e) => e.preventDefault());
   const deb = debounce(() => refresh(), 250);
   $('f-q').addEventListener('input', deb);

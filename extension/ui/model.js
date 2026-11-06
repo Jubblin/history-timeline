@@ -27,6 +27,23 @@ export function viewState({ loading = false, error = null, total = 0, shown = 0 
   if (loading) return 'results';
   return total ? 'empty-filtered' : 'empty-history';
 }
+export const TRANSITION_LABELS = Object.freeze({
+  link: 'Clicked link', typed: 'Typed address', auto_bookmark: 'Bookmark or suggestion', auto_subframe: 'Embedded page (automatic)',
+  manual_subframe: 'Embedded page (clicked)', generated: 'Search result', auto_toplevel: 'Opened automatically', form_submit: 'Form submit',
+  reload: 'Reload', keyword: 'Search shortcut', keyword_generated: 'Search shortcut result',
+});
+export const transitionLabel = (t) => TRANSITION_LABELS[t] ?? t;
+
+export const RANGE_REVERSED = 'The \u201cTo\u201d date is earlier than the \u201cFrom\u201d date, so nothing can match. Swap the dates or clear one of them.';
+export const isReversedRange = (start, end) => !!start && !!end && start > end;
+
+// Empty-result text. With hide on, say how many flagged visits were left out of the search.
+export function emptyFilteredMessage({ hide = false, hiddenCount = 0, searching = false } = {}) {
+  if (hide && searching && hiddenCount > 0) {
+    return `No visible visits match. ${plural(hiddenCount, 'sensitive visit')} would match but ${hiddenCount === 1 ? 'is' : 'are'} hidden and not searched. Turn off \u201cHide sensitive details\u201d to include ${hiddenCount === 1 ? 'it' : 'them'}.`;
+  }
+  return EMPTY_FILTERED;
+}
 const pad = (n) => String(n).padStart(2, '0');
 
 export function isFlagged(v) { return v.categories.length > 0; }
