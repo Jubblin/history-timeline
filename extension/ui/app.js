@@ -3,7 +3,7 @@
 import { loadVisits, TRANSITIONS } from '../src/history/index.js';
 import { el, pad, localTime, fmtDay, num, debounce, catBadge as makeCatBadge, downloadBlob, buildTransitionFilter, fillRow as sharedFillRow } from './ui-common.js';
 import { CATEGORIES, createClassifier, parseUserRules, loadBundledRules } from './classify-import.js';
-import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, RANGE_REVERSED, isReversedRange, emptyFilteredMessage, transitionLabel, describeLoadError, viewState, isMasked, annotate, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv } from './model.js';
+import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, RANGE_REVERSED, isReversedRange, emptyFilteredMessage, transitionLabel, describeLoadError, viewState, isMasked, annotate, rovingIndex, dismissPopup, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv } from './model.js';
 
 const PAGE = 200;
 const HIDE_KEY = 'history-timeline.hideSensitive';
@@ -63,6 +63,7 @@ function renderChart(visits) {
 
 function renderDomains(visits) {
   const ol = $('domains');
+  const had = ol.contains(document.activeElement) ? document.activeElement.dataset.domain : null;
   ol.replaceChildren();
   for (const d of domainStats(visits)) {
     const li = el('li');
@@ -74,13 +75,19 @@ function renderDomains(visits) {
       li.appendChild(row);
     } else {
       const b = el('button');
-      b.type = 'button';
-      b.append(el('span', '', d.domain), el('span', 'n', num(d.visits)));
+      b.type = 'button'; b.dataset.domain = d.domain; b.title = d.domain;
+      b.tabIndex = -1;
+      b.append(el('span', 'dn', d.domain), el('span', 'n', num(d.visits)));
       b.addEventListener('click', () => { $('f-domain').value = d.domain; refresh(); });
       li.appendChild(b);
     }
     ol.appendChild(li);
   }
+  // One tab stop for the whole list (roving tabindex); arrow keys move within it.
+  const btns = [...ol.querySelectorAll('button')];
+  const keep = btns.find((b) => b.dataset.domain === had) ?? btns[0];
+  if (keep) keep.tabIndex = 0;
+  if (had && keep && keep.dataset.domain === had) keep.focus();
 }
 
 function renderChips(visits) {
@@ -127,13 +134,9 @@ function renderMore(count) {
       c.dayEl = el('section', 'day');
       const d = days[day];
       const h = el('h3', '', fmtDay(d.ms));
-      const meta = el('span', '', plural(d.visits, 'visit'));
-      h.appendChild(meta);
-      if (d.flagged) {
-        const f = el('span', 'flagn', `⚑ ${num(d.flagged)} flagged`);
-        f.style.marginLeft = '8px';
-        h.appendChild(f);
-      }
+      // Visually hidden commas keep the parts of the heading apart for screen readers.
+      h.append(el('span', 'sr-only', ', '), el('span', '', plural(d.visits, 'visit')));
+      if (d.flagged) h.append(el('span', 'sr-only', ', '), el('span', 'flagn', `⚑ ${num(d.flagged)} flagged`));
       c.dayEl.appendChild(h);
       frag.appendChild(c.dayEl);
     }
@@ -350,6 +353,7 @@ function wire() {
     refresh();
   });
   $('f-csv').addEventListener('click', exportCsv);
+  dismissPopup($('f-trans').closest('details'), document, $('f-trans').closest('details').querySelector('summary'));
   try { st.hide = localStorage.getItem(HIDE_KEY) === '1'; } catch { /* ignore */ }
   $('f-hide').checked = st.hide;
   $('f-hide').addEventListener('change', (e) => {
@@ -361,6 +365,14 @@ function wire() {
   $('more').addEventListener('click', () => renderMore(PAGE));
   window.addEventListener('scroll', checkSentinel, { passive: true });
   window.addEventListener('resize', checkSentinel);
+  $('domains').addEventListener('keydown', (e) => {
+    const btns = [...$('domains').querySelectorAll('button')];
+    const i = btns.indexOf(document.activeElement);
+    const j = rovingIndex(e.key, i, btns.length);
+    if (j == null) return;
+    e.preventDefault();
+    btns[i].tabIndex = -1; btns[j].tabIndex = 0; btns[j].focus();
+  });
   // Roving tabindex on the chart.
   const chart = $('chart');
   chart.addEventListener('keydown', (e) => {

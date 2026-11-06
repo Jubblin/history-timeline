@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, toCsv, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
+import { applyFilters, toCsv, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, rovingIndex, dismissPopup, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
 import { createClassifier, parseUserRules, loadBundledRules } from '../ui/test-support/stub-classifier.js';
 
 const T0 = new Date(2025, 5, 10, 12, 0).getTime();
@@ -153,4 +153,47 @@ test('every transition has a plain label', async () => {
   for (const t of TRANSITIONS) assert.ok(TRANSITION_LABELS[t] && !/_/.test(TRANSITION_LABELS[t]), t);
   assert.equal(transitionLabel('typed'), 'Typed address');
   assert.equal(transitionLabel('mystery'), 'mystery');
+});
+
+// ---- popup dismissal and roving focus (F6) ----
+function popupFixture() {
+  const handlers = {};
+  const doc = { addEventListener: (t, f) => { handlers[t] = f; } };
+  const inside = {}, outside = {};
+  const summary = { focused: 0, focus() { this.focused++; } };
+  const details = { open: true, contains: (n) => n === inside };
+  dismissPopup(details, doc, summary);
+  return { handlers, details, summary, inside, outside };
+}
+
+test('Escape closes the open popup and returns focus to its summary', () => {
+  const { handlers, details, summary } = popupFixture();
+  handlers.keydown({ key: 'a' });
+  assert.equal(details.open, true);
+  handlers.keydown({ key: 'Escape' });
+  assert.equal(details.open, false);
+  assert.equal(summary.focused, 1);
+  handlers.keydown({ key: 'Escape' }); // already closed: focus is left alone
+  assert.equal(summary.focused, 1);
+});
+
+test('a click outside closes the popup; a click inside does not and focus is not stolen', () => {
+  const { handlers, details, summary, inside, outside } = popupFixture();
+  handlers.click({ target: inside });
+  assert.equal(details.open, true);
+  handlers.click({ target: outside });
+  assert.equal(details.open, false);
+  assert.equal(summary.focused, 0);
+});
+
+test('rovingIndex moves within bounds with Up/Down/Home/End and ignores other keys', () => {
+  assert.equal(rovingIndex('ArrowDown', 0, 3), 1);
+  assert.equal(rovingIndex('ArrowDown', 2, 3), 2);
+  assert.equal(rovingIndex('ArrowUp', 0, 3), 0);
+  assert.equal(rovingIndex('ArrowUp', 2, 3), 1);
+  assert.equal(rovingIndex('Home', 2, 3), 0);
+  assert.equal(rovingIndex('End', 0, 3), 2);
+  assert.equal(rovingIndex('Tab', 0, 3), null);
+  assert.equal(rovingIndex('ArrowDown', -1, 3), null);
+  assert.equal(rovingIndex('ArrowDown', 0, 0), null);
 });

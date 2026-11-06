@@ -80,7 +80,7 @@ export function fillRow(row, makeView, catBadge) {
   t.dateTime = vm.iso;
   const badge = el('span', 'badge', masked ? MASK : (vm.domain || '(none)'));
   if (masked) badge.classList.add('domain-hidden');
-  else badge.style.background = `hsl(${hue(vm.domain || '')} 45% 38%)`;
+  else badge.style.background = `hsl(${hue(vm.domain || '')} 45% 32%)`;
   const main = el('div', 'vmain');
   let tl, url;
   if (masked) {
@@ -92,6 +92,7 @@ export function fillRow(row, makeView, catBadge) {
     if (href) { tl = el('a', 'vtitle', title); tl.href = href; tl.rel = 'noopener noreferrer'; tl.target = '_blank'; }
     else tl = el('span', 'vtitle', title);
     tl.title = title;
+    tl.dir = 'auto'; // titles are untrusted text in any script; let the browser pick the direction
     url = el('span', 'vurl', vm.url);
     url.title = vm.url;
   }

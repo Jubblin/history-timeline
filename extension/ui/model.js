@@ -147,3 +147,25 @@ export function toCsv(visits, hide) {
   }
   return rows.join('\r\n') + '\r\n';
 }
+
+// ---- keyboard helpers (DOM-free apart from the objects passed in, so they are unit-tested in Node) ----
+
+// Index to focus after `key` in a roving group of `n` items currently at `i`; null when the key is not handled.
+export function rovingIndex(key, i, n, keys = { next: 'ArrowDown', prev: 'ArrowUp' }) {
+  if (n <= 0 || i < 0) return null;
+  const j = { [keys.next]: i + 1, [keys.prev]: i - 1, Home: 0, End: n - 1 }[key];
+  return j == null ? null : Math.max(0, Math.min(n - 1, j));
+}
+
+// Closes a <details> popup on Escape (returning focus to its summary) and on a click outside it.
+// `doc` only needs addEventListener; `details` needs open, contains() and a summary with focus().
+export function dismissPopup(details, doc, summary) {
+  doc.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !details.open) return;
+    details.open = false;
+    summary.focus();
+  });
+  doc.addEventListener('click', (e) => {
+    if (details.open && !details.contains(e.target)) details.open = false;
+  });
+}

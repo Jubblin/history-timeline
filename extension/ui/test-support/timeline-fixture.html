@@ -43,12 +43,12 @@
       <div id="chart" class="chart" role="group" aria-label="Visits per period. Use left and right arrow keys to move between bars, Enter to zoom to that period."></div>
     </div>
     <div class="domains-wrap">
-      <h2>Top domains</h2>
-      <ol id="domains" class="domains"></ol>
+      <h2 id="domains-h">Top domains</h2>
+      <ol id="domains" class="domains" aria-labelledby="domains-h"></ol>
     </div>
   </section>
 
-  <form id="filters" class="filters" tabindex="-1" autocomplete="off">
+  <form id="filters" class="filters" tabindex="-1" autocomplete="off" aria-label="Filter visits">
     <label>From <input type="date" id="f-start" aria-describedby="range-msg"></label>
     <label>To <input type="date" id="f-end" aria-describedby="range-msg"></label>
     <label class="grow">Search <input type="search" id="f-q" placeholder="title or URL"></label>
@@ -73,7 +73,7 @@
   </fieldset>
   <div id="summary-line" class="summary-line"></div>
 
-  <div id="timeline" class="timeline" tabindex="-1"></div>
+  <div id="timeline" class="timeline" tabindex="-1" role="region" aria-label="Visit timeline"></div>
   <div id="sentinel" class="sentinel"><button type="button" id="more" hidden>Load more</button></div>
   <div id="state" class="state" hidden>
     <p id="state-msg"></p>
