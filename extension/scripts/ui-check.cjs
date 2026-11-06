@@ -85,6 +85,9 @@ const rows = (page) => page.locator('#timeline .visit').count();
     const total = Number((await page.textContent('#summary-line')).match(/^([\d,]+) visits? match(es)?/)[1].replace(/,/g, ''));
     check(total >= 10000, `fixture loaded ${total} visits (${status}); first rows after ${firstPaint} ms`);
     check(await rows(page) === 200, `progressive rendering: ${await rows(page)} rows in DOM initially`);
+    check(await page.isChecked('#f-hide') === true, 'first run: Hide sensitive details is on by default');
+    await page.uncheck('#f-hide');
+    await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(shots, 'fixture-light.png') });
 
     // structure
@@ -168,7 +171,7 @@ const rows = (page) => page.locator('#timeline .visit').count();
     // CSV (masked)
     let [dl] = await Promise.all([page.waitForEvent('download'), page.click('#f-csv')]);
     let csv = fs.readFileSync(await dl.path(), 'utf8');
-    check(/^time,url,title,domain,transition,categories\r\n/.test(csv) && !/bet365\.com|Secret casino|aetna\.com|Bank accounts/.test(csv) && csv.includes('[hidden]') && /,gambling\r\n/.test(csv), 'CSV with hide on: flagged values masked, categories column kept');
+    check(/^\uFEFFtime_utc,url,title,domain,transition,categories\r\n/.test(csv) && !/bet365\.com|Secret casino|aetna\.com|Bank accounts/.test(csv) && csv.includes('[hidden]') && /,gambling\r\n/.test(csv), 'CSV with hide on: flagged values masked, categories column kept');
     check(csv.split('\r\n').length - 2 === total && !/\r\n[=+@-]/.test(csv), `CSV exports all ${total} filtered rows`);
     await page.uncheck('#f-hide');
     await page.waitForTimeout(300);
@@ -181,6 +184,11 @@ const rows = (page) => page.locator('#timeline .visit').count();
     await page.fill('#rules-text', '{not json');
     await page.click('#rules-save');
     const err = await page.textContent('#rules-error');
+    check(/not valid JSON/.test(err) && /Valid categories|categories/.test(await page.textContent('#rules-cats')), 'rules editor: friendly error and category list');
+    await page.click('#rules-example');
+    check(JSON.parse(await page.inputValue('#rules-text')).add.finance.domains.length === 1, 'Insert example fills a valid sample');
+    await page.fill('#rules-text', '{not json');
+    await page.click('#rules-save');
     check(err.length > 0 && !/http|example\.test/.test(err) && await page.locator('#rules-error').getAttribute('role') === 'alert', `invalid rules rejected with message: "${err}"`);
     await page.fill('#rules-text', JSON.stringify({ allow: { gambling: { domains: ['bet365.com'] } }, add: { finance: { domains: ['site1.example.test'] } } }));
     await page.click('#rules-save');
@@ -201,7 +209,16 @@ const rows = (page) => page.locator('#timeline .visit').count();
     await p2.goto(base.replace('timeline.html','ui/test-support/timeline-fixture.html'));
     await loaded(p2);
     check(JSON.parse(await p2.inputValue('#rules-text')).allow.gambling.domains.includes('bet365.com'), 'user rules persisted in chrome.storage.local');
-    check(await p2.isChecked('#f-hide') === false, 'hide toggle state restored from storage');
+    check(await p2.isChecked('#f-hide') === false, 'saved "off" is kept on reload (stored choice not overridden)');
+    await p2.setViewportSize({ width: 480, height: 800 });
+    await p2.waitForTimeout(300);
+    const sizes = await p2.evaluate(() => {
+      const h = (sel) => [...document.querySelectorAll(sel)].filter((e) => e.offsetParent).map((e) => Math.round(Math.min(e.getBoundingClientRect().height, 999)));
+      return { buttons: Math.min(...h('.top button, .filters button, #more')), summary: Math.min(...h('.transitions summary')), chips: Math.min(...h('.chip, #cat-chips button')), domains: Math.min(...h('.domains button')), toggle: Math.min(...h('.hide-toggle')), box: Math.round(document.getElementById('f-hide').getBoundingClientRect().width) };
+    });
+    console.log('target sizes at 480px (px):', JSON.stringify(sizes));
+    check(sizes.buttons >= 44 && sizes.summary >= 44 && sizes.chips >= 36 && sizes.domains >= 44 && sizes.toggle >= 44 && sizes.box >= 24, 'touch targets >= 36-44px at 480px width');
+    await p2.screenshot({ path: path.join(shots, 'fixture-480-light.png') });
     await p2.setViewportSize({ width: 420, height: 800 });
     await p2.waitForTimeout(300);
     check(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no horizontal overflow at 420px width');

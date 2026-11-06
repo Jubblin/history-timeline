@@ -66,3 +66,14 @@ test('non-http URLs are not linked', () => {
   fillRow(row, () => ({ id: 'x', timeMs: 0, iso: '1970-01-01T00:00:00.000Z', url: 'javascript:alert(1)', title: 't', domain: '', transition: 'link', categories: [], durationMs: 0, masked: false, hide: false, onToggleReveal() {} }), cb);
   assert.equal(row.find((n) => n.tag === 'a'), null);
 });
+
+test('titles are dir=auto and domain badges keep white-text contrast of at least 4.5:1 for every hue', () => {
+  const { row } = setup(false);
+  assert.equal(row.find((n) => n.tag === 'a').dir, 'auto');
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const lumOf = (h, s, l) => { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l); const f = (n) => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+    return 0.2126 * lin(f(0) * 255) + 0.7152 * lin(f(8) * 255) + 0.0722 * lin(f(4) * 255); };
+  const m = /hsl\(\d+ (\d+)% (\d+)%\)/.exec(row.find((n) => n.className === 'badge').style.background);
+  assert.ok(m, 'badge uses hsl()');
+  for (let h = 0; h < 360; h++) assert.ok(1.05 / (lumOf(h, +m[1], +m[2]) + 0.05) >= 4.5, `hue ${h}`);
+});

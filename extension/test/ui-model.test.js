@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, toCsv, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED } from '../ui/model.js';
+import { initialHide, HIDE_DEFAULT, friendlyRulesError, needsEmptyConfirm, rulesCategoryList, RULES_EXAMPLE, barIndexAt, emptyFilteredMessage, applyFilters, toCsv, csvFilename, filterSummary, CSV_BOM, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, rovingIndex, dismissPopup, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
 import { createClassifier, parseUserRules, loadBundledRules } from '../ui/test-support/stub-classifier.js';
 
 const T0 = new Date(2025, 5, 10, 12, 0).getTime();
@@ -33,8 +33,8 @@ test('category and transition filters', async () => {
 
 test('csv masks flagged rows, guards formulas, adds categories', async () => {
   const vs = await data();
-  const lines = toCsv(vs, true).trim().split('\r\n');
-  assert.equal(lines[0], 'time,url,title,domain,transition,categories');
+  const lines = toCsv(vs, true).slice(1).trim().split('\r\n');
+  assert.equal(lines[0], 'time_utc,url,title,domain,transition,categories');
   assert.ok(lines[1].includes(`${MASK},${MASK},${MASK}`) && lines[1].endsWith('link,gambling'));
   assert.ok(!toCsv(vs, true).includes('Secret slots'));
   assert.ok(toCsv(vs, false).includes('Secret slots'));
@@ -98,4 +98,169 @@ test('plural pluralises', () => {
 test('empty-history message differs from filtered-empty and mentions no sensitive terms', () => {
   assert.notEqual(EMPTY_HISTORY, EMPTY_FILTERED);
   assert.match(EMPTY_HISTORY, /no browsing history/);
+});
+
+test('viewState: loading and error never fall through to the empty text', () => {
+  assert.equal(viewState({ loading: true, total: 0, shown: 0 }), 'loading');
+  assert.equal(viewState({ error: 'x', total: 0, shown: 0 }), 'error');
+  assert.equal(viewState({ error: 'x', loading: true, total: 5, shown: 5 }), 'error');
+  assert.equal(viewState({ total: 0, shown: 0 }), 'empty-history');
+  assert.equal(viewState({ total: 5, shown: 0 }), 'empty-filtered');
+  assert.equal(viewState({ total: 5, shown: 3 }), 'results');
+  assert.equal(viewState({ loading: true, total: 5, shown: 0 }), 'results');
+  assert.match(LOADING_MSG, /^Loading/);
+});
+
+test('describeLoadError gives plain wording and never the raw JS message', () => {
+  const raw = "Cannot read properties of undefined (reading 'search')";
+  assert.equal(describeLoadError(new TypeError(raw), { hasApi: false }), ERROR_NO_ACCESS);
+  assert.equal(describeLoadError(new TypeError(raw)), ERROR_NO_ACCESS);
+  assert.equal(describeLoadError(new Error('Permission denied')), ERROR_NO_ACCESS);
+  assert.equal(describeLoadError(new Error('boom: disk 0x1f')), ERROR_GENERIC);
+  assert.equal(describeLoadError(null), ERROR_GENERIC);
+  for (const m of [ERROR_NO_ACCESS, ERROR_GENERIC]) assert.doesNotMatch(m, /Cannot read|undefined|boom/);
+  assert.match(ERROR_NO_ACCESS, /Permissions/);
+});
+
+test('reversed date range is detected and explained', async () => {
+  const { isReversedRange, RANGE_REVERSED } = await import('../ui/model.js');
+  assert.equal(isReversedRange('2025-06-10', '2025-06-01'), true);
+  assert.equal(isReversedRange('2025-06-01', '2025-06-10'), false);
+  assert.equal(isReversedRange('2025-06-01', '2025-06-01'), false);
+  assert.equal(isReversedRange('', '2025-06-01'), false);
+  assert.match(RANGE_REVERSED, /earlier than/);
+  const vs = await data();
+  assert.deepEqual(applyFilters(vs, { start: '2025-06-11', end: '2025-06-10', cats: new Set() }, false), []);
+});
+
+test('hide-mode search gives a specific empty message', async () => {
+  const { emptyFilteredMessage } = await import('../ui/model.js');
+  const vs = await data();
+  const f = { text: 'slots', domain: '', cats: new Set() };
+  const hiddenCount = applyFilters(vs, f, false).filter((v) => v.categories.length).length - applyFilters(vs, f, true).filter((v) => v.categories.length).length;
+  assert.equal(hiddenCount, 1);
+  const m = emptyFilteredMessage({ hide: true, hiddenCount, searching: true });
+  assert.match(m, /1 sensitive visit would match but is hidden and not searched/);
+  assert.match(emptyFilteredMessage({ hide: true, hiddenCount: 3, searching: true }), /3 sensitive visits would match but are hidden/);
+  assert.equal(emptyFilteredMessage({ hide: true, hiddenCount: 0, searching: true }), EMPTY_FILTERED);
+  assert.equal(emptyFilteredMessage({ hide: false, hiddenCount: 2, searching: true }), EMPTY_FILTERED);
+  assert.equal(emptyFilteredMessage({ hide: true, hiddenCount: 2, searching: false }), EMPTY_FILTERED);
+});
+
+test('every transition has a plain label', async () => {
+  const { transitionLabel, TRANSITION_LABELS } = await import('../ui/model.js');
+  const { TRANSITIONS } = await import('../src/history/index.js');
+  for (const t of TRANSITIONS) assert.ok(TRANSITION_LABELS[t] && !/_/.test(TRANSITION_LABELS[t]), t);
+  assert.equal(transitionLabel('typed'), 'Typed address');
+  assert.equal(transitionLabel('mystery'), 'mystery');
+});
+
+// ---- popup dismissal and roving focus (F6) ----
+function popupFixture() {
+  const handlers = {};
+  const doc = { addEventListener: (t, f) => { handlers[t] = f; } };
+  const inside = {}, outside = {};
+  const summary = { focused: 0, focus() { this.focused++; } };
+  const details = { open: true, contains: (n) => n === inside };
+  dismissPopup(details, doc, summary);
+  return { handlers, details, summary, inside, outside };
+}
+
+test('Escape closes the open popup and returns focus to its summary', () => {
+  const { handlers, details, summary } = popupFixture();
+  handlers.keydown({ key: 'a' });
+  assert.equal(details.open, true);
+  handlers.keydown({ key: 'Escape' });
+  assert.equal(details.open, false);
+  assert.equal(summary.focused, 1);
+  handlers.keydown({ key: 'Escape' }); // already closed: focus is left alone
+  assert.equal(summary.focused, 1);
+});
+
+test('a click outside closes the popup; a click inside does not and focus is not stolen', () => {
+  const { handlers, details, summary, inside, outside } = popupFixture();
+  handlers.click({ target: inside });
+  assert.equal(details.open, true);
+  handlers.click({ target: outside });
+  assert.equal(details.open, false);
+  assert.equal(summary.focused, 0);
+});
+
+test('rovingIndex moves within bounds with Up/Down/Home/End and ignores other keys', () => {
+  assert.equal(rovingIndex('ArrowDown', 0, 3), 1);
+  assert.equal(rovingIndex('ArrowDown', 2, 3), 2);
+  assert.equal(rovingIndex('ArrowUp', 0, 3), 0);
+  assert.equal(rovingIndex('ArrowUp', 2, 3), 1);
+  assert.equal(rovingIndex('Home', 2, 3), 0);
+  assert.equal(rovingIndex('End', 0, 3), 2);
+  assert.equal(rovingIndex('Tab', 0, 3), null);
+  assert.equal(rovingIndex('ArrowDown', -1, 3), null);
+  assert.equal(rovingIndex('ArrowDown', 0, 0), null);
+});
+
+test('csv starts with a UTF-8 BOM and labels its times as UTC', async () => {
+  const csv = toCsv(await data(), false);
+  assert.equal(csv[0], CSV_BOM);
+  assert.ok(csv.startsWith(CSV_BOM + 'time_utc,url,'));
+  assert.match(csv.split('\r\n')[1], /^\d{4}-\d\d-\d\dT[\d:.]+Z,/);
+});
+
+test('csvFilename includes local date and filters, and is file-system safe', () => {
+  const now = new Date(2026, 10, 6, 9, 0);
+  assert.equal(csvFilename({}, now), 'history-2026-11-06.csv');
+  assert.equal(csvFilename({ start: '2026-08-21', end: '2026-08-21' }, now), 'history-2026-11-06-on-2026-08-21.csv');
+  assert.equal(csvFilename({ start: '2026-08-01', end: '2026-08-31', domain: 'Site0.example.test', text: 'x' }, now),
+    'history-2026-11-06-2026-08-01-to-2026-08-31-site0.example.test-search.csv');
+  assert.equal(csvFilename({ domain: '../../etc/passwd ' }, now), 'history-2026-11-06-etc-passwd.csv');
+  assert.ok(!/[\\/:*?"<>|\s]/.test(csvFilename({ domain: 'a/b c:d' }, now)));
+});
+
+test('filterSummary lists each active filter with a key for its remove button', () => {
+  assert.deepEqual(filterSummary({ start: '', end: '', text: ' ', domain: '', transitions: null, cats: new Set() }), []);
+  const s = filterSummary({ start: '2026-08-21', end: '2026-08-21', text: 'cat', domain: 'a.test', transitions: ['typed'], cats: new Set(['gambling']) },
+    { catLabel: (c) => c.toUpperCase() });
+  assert.deepEqual(s.map((x) => x.key), ['dates', 'text', 'domain', 'transitions', 'cat:gambling']);
+  assert.ok(s[1].label.includes('cat') && s[4].label.includes('GAMBLING'));
+  assert.deepEqual(filterSummary({ start: '2026-08-01', end: '2026-08-02' }).map((x) => x.key), ['start', 'end']);
+  assert.equal(filterSummary({ transitions: ['\u0000none'] })[0].label, 'no transition types');
+});
+
+test('hide sensitive details: on for first-time users, saved choice wins', () => {
+  assert.equal(HIDE_DEFAULT, true);
+  assert.equal(initialHide(null), true);
+  assert.equal(initialHide(undefined), true);
+  assert.equal(initialHide('garbage'), true);
+  assert.equal(initialHide('1'), true);
+  assert.equal(initialHide('0'), false); // a saved "off" is never overridden
+});
+
+test('empty-state messages still make sense with hiding on from the start', async () => {
+  assert.equal(emptyFilteredMessage({ hide: true, searching: false, hiddenCount: 0 }), EMPTY_FILTERED);
+  assert.match(emptyFilteredMessage({ hide: true, searching: true, hiddenCount: 2 }), /2 sensitive visits would match.*Turn off \u201cHide sensitive details\u201d/);
+});
+
+test('rules editor: categories, example, friendly errors and empty confirm', async () => {
+  const cats = [{ id: 'finance', label: 'Finance' }, { id: 'news_politics', label: 'News & politics' }];
+  assert.equal(rulesCategoryList(cats), 'finance (Finance), news_politics (News & politics)');
+  const ok = parseUserRules(RULES_EXAMPLE);
+  assert.ok(ok.rules && !ok.error, 'inserted example is valid');
+  const bad = parseUserRules('{not json');
+  const msg = friendlyRulesError(bad.error, cats);
+  assert.match(msg, /not valid JSON.*Insert example/);
+  assert.match(msg, /Detail: /);
+  assert.match(friendlyRulesError('unknown category "x" (valid: a)', cats), /Valid categories: finance, news_politics/);
+  assert.match(friendlyRulesError('unknown field "x" (valid: add, allow)', cats), /add.*allow/);
+  assert.match(friendlyRulesError('something odd', cats), /nothing was saved/);
+  assert.equal(needsEmptyConfirm('  ', '{"add":{}}'), true);
+  assert.equal(needsEmptyConfirm('', ''), false);
+  assert.equal(needsEmptyConfirm('{}', '{"add":{}}'), false);
+});
+
+test('chart scrub maps a pointer x to the nearest bar', () => {
+  assert.equal(barIndexAt(0, 0, 100, 10), 0);
+  assert.equal(barIndexAt(55, 0, 100, 10), 5);
+  assert.equal(barIndexAt(999, 0, 100, 10), 9);
+  assert.equal(barIndexAt(-5, 0, 100, 10), 0);
+  assert.equal(barIndexAt(10, 0, 0, 10), -1);
+  assert.equal(barIndexAt(10, 0, 100, 0), -1);
 });

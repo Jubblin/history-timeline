@@ -22,7 +22,7 @@ See what your browser profile has recorded about you.
 
 Browsing History Timeline turns your browsing history into a readable timeline: visits grouped into days and sessions, an activity chart, top sites, search and filters (date range, site, transition type), and CSV export.
 
-Visits that look sensitive (gambling, health, finance, adult content, privacy tools, news and politics) get clear badges, per-day counts and category filters, so you can review what is recorded before you share a screen, hand over a device, or clean up. "Hide sensitive details" masks flagged titles, URLs and sites everywhere, including in the CSV export.
+Visits that look sensitive (gambling, health, finance, adult content, privacy tools, news and politics) get clear badges, per-day counts and category filters, so you can review what is recorded before you share a screen, hand over a device, or clean up. "Hide sensitive details" is on by default and masks flagged titles, URLs and sites everywhere, including in the CSV export; untick it to see everything.
 
 Private by design:
 - Works entirely on your device. No network requests, no servers, no accounts, no analytics, no remote code.
@@ -45,5 +45,10 @@ No host permissions are requested. No remote code is used.
 
 ## Assets
 - Icons: `../icons/icon-{16,32,48,128}.png` (generated from `icon.svg`, original artwork).
-- Screenshots (1280x800, synthetic fixture data): `screenshots/`.
+- Screenshots (1280x800, synthetic fixture data, UK dates): `screenshots/`. Captions:
+  1. `1-timeline-light.png`: Your browsing history as a day-by-day timeline, with activity chart and top domains.
+  2. `2-category-filter-light.png`: Filter to flagged categories; sensitive details stay hidden by default.
+  3. `3-rules-settings-light.png`: Add or allow your own classification rules, stored only in your browser profile.
+  4. `4-timeline-dark.png`: The same timeline in dark mode.
+  5. `5-hide-sensitive-before-after.png`: Hide sensitive details on (default) versus off.
 - Privacy policy: `PRIVACY.md` (needs a public URL, see the checklist).
