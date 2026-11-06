@@ -4,8 +4,29 @@ import { dayKey, filterVisits, DEFAULT_SESSION_GAP_MS } from '../src/history/ind
 import { MASK, csvCell, binOf, binRange } from './ui-common.js';
 export { MASK, csvCell };
 export const plural = (n, one, many = one + 's') => `${n.toLocaleString()} ${n === 1 ? one : many}`;
-export const EMPTY_HISTORY = 'The browser has no browsing history for this profile (it may be new, or its history was cleared). Visit some pages, then reload this tab.';
+export const EMPTY_HISTORY = 'The browser has no browsing history for this profile (it may be new, or its history was cleared). Visit some pages, then reload.';
 export const EMPTY_FILTERED = 'No visits match these filters.';
+export const LOADING_MSG = 'Loading your history…';
+export const ERROR_NO_ACCESS = 'Chrome did not give this extension access to your history. Check chrome://extensions → Details → Permissions, then try again.';
+export const ERROR_GENERIC = 'Your history could not be loaded. Try again; if it keeps failing, restart the browser.';
+
+// Plain-English wording for a load failure. Never exposes the raw JS message.
+// A missing history API or a permission error is reported as an access problem.
+export function describeLoadError(e, { hasApi = true } = {}) {
+  if (!hasApi) return ERROR_NO_ACCESS;
+  const msg = String((e && e.message) || '');
+  if (/permission|not allowed|denied|cannot read properties of (undefined|null)|undefined is not|is not a function/i.test(msg)) return ERROR_NO_ACCESS;
+  return ERROR_GENERIC;
+}
+
+// Which main-area state to show. An error or loading state never falls through to the empty text.
+export function viewState({ loading = false, error = null, total = 0, shown = 0 } = {}) {
+  if (error) return 'error';
+  if (loading && !total) return 'loading';
+  if (shown > 0) return 'results';
+  if (loading) return 'results';
+  return total ? 'empty-filtered' : 'empty-history';
+}
 const pad = (n) => String(n).padStart(2, '0');
 
 export function isFlagged(v) { return v.categories.length > 0; }

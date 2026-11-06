@@ -36,7 +36,7 @@
     </div>
   </section>
 
-  <section class="overview" aria-label="Overview">
+  <section id="overview" class="overview" aria-label="Overview" hidden>
     <div class="chart-wrap">
       <h2>Activity <small id="chart-unit"></small><small><span class="legend-flag" aria-hidden="true"></span>striped = flagged visits</small></h2>
       <div id="chart" class="chart" role="group" aria-label="Visits per period. Use left and right arrow keys to move between bars, Enter to zoom to that period."></div>
@@ -69,7 +69,10 @@
 
   <div id="timeline" class="timeline" tabindex="-1"></div>
   <div id="sentinel" class="sentinel"><button type="button" id="more" hidden>Load more</button></div>
-  <p id="empty" class="empty" hidden>No visits match these filters.</p>
+  <div id="state" class="state" hidden>
+    <p id="state-msg"></p>
+    <button type="button" id="state-action" hidden></button>
+  </div>
 </main>
 <script type="module" src="fixture-main.js"></script>
 </body>

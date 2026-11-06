@@ -3,7 +3,7 @@
 import { loadVisits, TRANSITIONS } from '../src/history/index.js';
 import { el, pad, localTime, fmtDay, num, debounce, catBadge as makeCatBadge, downloadBlob, buildTransitionFilter, fillRow as sharedFillRow } from './ui-common.js';
 import { CATEGORIES, createClassifier, parseUserRules, loadBundledRules } from './classify-import.js';
-import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, isMasked, annotate, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv } from './model.js';
+import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, describeLoadError, viewState, isMasked, annotate, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv } from './model.js';
 
 const PAGE = 200;
 const HIDE_KEY = 'history-timeline.hideSensitive';
@@ -14,7 +14,7 @@ const $ = (id) => document.getElementById(id);
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 const st = { all: [], classifier: null, bundled: null, hide: false, revealed: new Set(), cats: new Set(),
-  filtered: [], lay: null, rendered: 0, cur: { day: -1, sess: -1, dayEl: null, sessEl: null }, loading: false, rulesSaved: '' };
+  filtered: [], lay: null, rendered: 0, cur: { day: -1, sess: -1, dayEl: null, sessEl: null }, loading: false, error: null, rulesSaved: '' };
 
 const setStatus = (m) => { $('status').textContent = m || ''; };
 
@@ -156,6 +156,33 @@ function updateSummaryLine() {
   $('summary-line').textContent = total ? `${plural(total, 'visit')} ${total === 1 ? 'matches' : 'match'} · showing ${num(Math.min(st.rendered, total))}` : '';
 }
 
+// Main-area message: loading, error (with Retry), empty history (with Reload) or no filter matches.
+// The overview panels are hidden while there is no data at all.
+function renderState() {
+  const kind = viewState({ loading: st.loading, error: st.error, total: st.all.length, shown: st.filtered.length });
+  const box = $('state');
+  const msg = $('state-msg');
+  const act = $('state-action');
+  $('overview').hidden = st.all.length === 0;
+  box.hidden = kind === 'results';
+  box.classList.toggle('state-error', kind === 'error');
+  box.removeAttribute('role');
+  act.hidden = true;
+  act.onclick = null;
+  if (kind === 'results') return;
+  if (kind === 'error') {
+    box.setAttribute('role', 'alert');
+    msg.textContent = st.error;
+    act.textContent = 'Retry'; act.hidden = false; act.onclick = () => retry();
+  } else if (kind === 'loading') {
+    box.setAttribute('role', 'status');
+    msg.textContent = LOADING_MSG;
+  } else if (kind === 'empty-history') {
+    msg.textContent = EMPTY_HISTORY;
+    act.textContent = 'Reload'; act.hidden = false; act.onclick = () => location.reload();
+  } else msg.textContent = EMPTY_FILTERED;
+}
+
 function checkSentinel() {
   if (!st.lay || st.rendered >= st.lay.entries.length) return;
   if ($('sentinel').getBoundingClientRect().top < window.innerHeight + 600) { renderMore(PAGE); checkSentinel(); }
@@ -182,13 +209,20 @@ function refresh({ keepCount = false } = {}) {
   st.cur = { day: -1, sess: -1, dayEl: null, sessEl: null };
   $('timeline').replaceChildren();
   renderMore(Math.max(PAGE, prev));
-  const empty = $('empty');
-  empty.hidden = st.filtered.length > 0 || st.loading;
-  empty.textContent = st.all.length ? EMPTY_FILTERED : EMPTY_HISTORY;
+  renderState();
   checkSentinel();
 }
 
 // ---- loading ----
+const hasHistoryApi = (h) => !!h && typeof h.search === 'function';
+let currentHistory = null;
+function retry() {
+  st.all = []; st.error = null; st.revealed.clear();
+  setStatus('');
+  refresh();
+  return loadAll(currentHistory);
+}
+
 let refreshTimer = 0;
 function scheduleRefresh() {
   if (refreshTimer) return;
@@ -197,6 +231,7 @@ function scheduleRefresh() {
 
 async function loadAll(history) {
   st.loading = true;
+  st.error = null;
   const prog = $('load-progress');
   const cancel = $('load-cancel');
   const ac = new AbortController();
@@ -213,7 +248,11 @@ async function loadAll(history) {
     setStatus(`${plural(st.all.length, 'visit')} loaded`);
   } catch (e) {
     if (e && e.name === 'AbortError') setStatus(`Loading cancelled: ${plural(st.all.length, 'visit')} loaded (partial)`);
-    else setStatus('Error loading history: ' + (e && e.message ? e.message : 'unknown error'));
+    else {
+      console.error('History load failed', e);
+      st.error = describeLoadError(e, { hasApi: hasHistoryApi(history) });
+      setStatus('');
+    }
   } finally {
     st.loading = false;
     prog.hidden = true;
@@ -333,6 +372,14 @@ export async function start(history) {
       $('rules-notice').textContent = msg + ' Open Settings to fix them; the saved text is kept until you save a valid replacement.';
     }
   } catch (e) { setStatus('Error starting: ' + (e && e.message ? e.message : 'unknown error')); return; }
+  currentHistory = history;
+  st.loading = true; // before the first refresh, so the empty-history text is never shown while loading
   refresh();
+  if (!hasHistoryApi(history)) {
+    st.loading = false;
+    st.error = describeLoadError(null, { hasApi: false });
+    refresh();
+    return;
+  }
   await loadAll(history);
 }

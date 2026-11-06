@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, toCsv, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED } from '../ui/model.js';
+import { applyFilters, toCsv, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
 import { createClassifier, parseUserRules, loadBundledRules } from '../ui/test-support/stub-classifier.js';
 
 const T0 = new Date(2025, 5, 10, 12, 0).getTime();
@@ -98,4 +98,26 @@ test('plural pluralises', () => {
 test('empty-history message differs from filtered-empty and mentions no sensitive terms', () => {
   assert.notEqual(EMPTY_HISTORY, EMPTY_FILTERED);
   assert.match(EMPTY_HISTORY, /no browsing history/);
+});
+
+test('viewState: loading and error never fall through to the empty text', () => {
+  assert.equal(viewState({ loading: true, total: 0, shown: 0 }), 'loading');
+  assert.equal(viewState({ error: 'x', total: 0, shown: 0 }), 'error');
+  assert.equal(viewState({ error: 'x', loading: true, total: 5, shown: 5 }), 'error');
+  assert.equal(viewState({ total: 0, shown: 0 }), 'empty-history');
+  assert.equal(viewState({ total: 5, shown: 0 }), 'empty-filtered');
+  assert.equal(viewState({ total: 5, shown: 3 }), 'results');
+  assert.equal(viewState({ loading: true, total: 5, shown: 0 }), 'results');
+  assert.match(LOADING_MSG, /^Loading/);
+});
+
+test('describeLoadError gives plain wording and never the raw JS message', () => {
+  const raw = "Cannot read properties of undefined (reading 'search')";
+  assert.equal(describeLoadError(new TypeError(raw), { hasApi: false }), ERROR_NO_ACCESS);
+  assert.equal(describeLoadError(new TypeError(raw)), ERROR_NO_ACCESS);
+  assert.equal(describeLoadError(new Error('Permission denied')), ERROR_NO_ACCESS);
+  assert.equal(describeLoadError(new Error('boom: disk 0x1f')), ERROR_GENERIC);
+  assert.equal(describeLoadError(null), ERROR_GENERIC);
+  for (const m of [ERROR_NO_ACCESS, ERROR_GENERIC]) assert.doesNotMatch(m, /Cannot read|undefined|boom/);
+  assert.match(ERROR_NO_ACCESS, /Permissions/);
 });
