@@ -59,7 +59,7 @@ a.vtitle:hover{text-decoration:underline;color:var(--accent)}
 .tr{border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px}
 .sentinel{height:40px;text-align:center}
 .empty{color:var(--muted);text-align:center;padding:30px}
-@media (max-width:700px){.visit{grid-template-columns:48px 1fr}.vmeta{grid-column:2;text-align:left}.badge{max-width:100%}}
+@media (max-width:700px){.visit{grid-template-columns:auto minmax(0,1fr);row-gap:2px}.visit .badge{max-width:100%}.visit .vmain,.visit .vmeta{grid-column:1/-1}.vmeta{text-align:left}}
 .skip + .skip:focus{left:150px}
 
 .bar b{position:absolute;left:0;right:0;bottom:0;display:block;min-height:0;border-radius:2px 2px 0 0;
