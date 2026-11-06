@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: "Submit the uploaded version for Chrome Web Store review. Untick to upload a draft only. Run this on a v* tag."
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -33,6 +39,7 @@ jobs:
 
   publish:
     needs: [extension]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -76,3 +83,101 @@ jobs:
               exit 1
               ;;
           esac
+
+  chrome-web-store:
+    # Optional: runs only for v* tags and only when the repository variable
+    # CWS_PUBLISH is "true". The "chrome-web-store" environment must require
+    # reviewer approval: that approval is the go/no-go gate, because a
+    # submission cannot be undone once it enters review. See CONTRIBUTING.md.
+    needs: [extension]
+    if: startsWith(github.ref, 'refs/tags/v') && vars.CWS_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: chrome-web-store
+    concurrency:
+      group: chrome-web-store
+      cancel-in-progress: false
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          name: dist-extension
+      - name: Upload to the Chrome Web Store and submit for review
+        env:
+          TAG: ${{ github.ref_name }}
+          SUBMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.submit || 'true' }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*"; exit 1; }
+
+          missing=""
+          for v in CWS_CLIENT_ID CWS_CLIENT_SECRET CWS_REFRESH_TOKEN CWS_PUBLISHER_ID CWS_EXTENSION_ID; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          [ -z "$missing" ] || fail "Missing secrets in the chrome-web-store environment:$missing"
+
+          [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*$ ]] || fail "Tag '$TAG' is not a plain version tag like v1.2.3."
+          version="${TAG#v}"
+          zip="dist/history-timeline-extension_${TAG}.zip"
+          [ -f "$zip" ] || fail "Built zip $zip not found."
+
+          base="https://chromewebstore.googleapis.com"
+          item="publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}"
+
+          # api <curl args...>: prints the JSON body, fails with it on non-2xx.
+          api() {
+            local out code
+            out=$(mktemp)
+            code=$(curl -sS -o "$out" -w '%{http_code}' -H "Authorization: Bearer $token" "$@") || fail "Could not reach the Chrome Web Store API."
+            if [[ "$code" != 2* ]]; then
+              echo "::error::Chrome Web Store API returned HTTP $code:"
+              cat "$out"; echo
+              exit 1
+            fi
+            cat "$out"
+          }
+
+          resp=$(curl -sS -X POST https://oauth2.googleapis.com/token \
+            --data-urlencode "client_id=$CWS_CLIENT_ID" \
+            --data-urlencode "client_secret=$CWS_CLIENT_SECRET" \
+            --data-urlencode "refresh_token=$CWS_REFRESH_TOKEN" \
+            -d grant_type=refresh_token) || fail "Could not reach Google's token endpoint."
+          token=$(jq -r '.access_token // empty' <<<"$resp")
+          [ -n "$token" ] || fail "Google rejected the OAuth credentials: $(jq -r '.error_description // .error // "unknown error"' <<<"$resp")"
+          echo "::add-mask::$token"
+
+          # Refuse versions the Store already has, or while another is in review.
+          status=$(api -X GET "$base/v2/$item:fetchStatus")
+          jq -r 'del(.publicKey)' <<<"$status"
+          have=$(jq -r '[.publishedItemRevisionStatus, .submittedItemRevisionStatus] | map(.distributionChannels // [] | .[].crxVersion) | .[]' <<<"$status")
+          if grep -qxF -- "$version" <<<"$have"; then
+            fail "Version $version is already published or submitted in the Chrome Web Store. Not resubmitting; bump the version and tag again."
+          fi
+          pending=$(jq -r '.submittedItemRevisionStatus.state // empty' <<<"$status")
+          if [ "$pending" = "PENDING_REVIEW" ]; then
+            fail "Another version is still in review. Wait for it, or cancel it in the dashboard, then re-run."
+          fi
+
+          up=$(api -X POST -T "$zip" "$base/upload/v2/$item:upload")
+          state=$(jq -r '.uploadState // empty' <<<"$up")
+          tries=0
+          while [ "$state" = "IN_PROGRESS" ]; do
+            tries=$((tries + 1))
+            [ "$tries" -le 30 ] || fail "Timed out waiting for the Store to process the upload."
+            sleep 10
+            state=$(api -X GET "$base/v2/$item:fetchStatus" | jq -r '.lastAsyncUploadState // empty')
+          done
+          [ "$state" = "SUCCESS" ] || fail "Chrome Web Store did not accept the upload (state: ${state:-unknown}). Check the version in extension/manifest.json and the dashboard."
+          echo "Upload of $version succeeded."
+
+          if [ "$SUBMIT" != "true" ]; then
+            echo "Upload-only run: left as a draft in the dashboard; not submitted."
+            exit 0
+          fi
+          res=$(api -X POST -H 'Content-Length: 0' "$base/v2/$item:publish")
+          echo "Submitted for review: $(jq -r '.state // "ok"' <<<"$res")"
