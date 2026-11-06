@@ -20,7 +20,7 @@ See [`extension/store/PRIVACY.md`](../extension/store/PRIVACY.md) for the full p
 ## 3. Download and verify
 
 1. Open the [release page for the version you are installing](https://github.com/Jubblin/history-timeline/releases/tag/vX.Y.Z). Under **Assets**, download:
-   - `history-timeline-extension_<version>.zip` (for example, for v0.5.0: `history-timeline-extension_v0.5.0.zip`)
+   - `history-timeline-extension_<version>.zip` (for example, for v0.6.0: `history-timeline-extension_v0.6.0.zip`)
    - `SHA256SUMS`
 2. Put both files in the same folder (for example Downloads) and check the zip was not damaged or altered. `SHA256SUMS` lists every release file, so only the extension line is checked.
 
@@ -61,7 +61,7 @@ The folder should now contain `manifest.json`, `timeline.html`, and the `icons`,
 1. Go to `chrome://extensions` (type it in the address bar).
 2. Turn on **Developer mode** (toggle at the top right). This is a browser setting on that page that lets you load extensions from a folder. It is unrelated to ChromeOS's own "Developer mode" device setting, which is not needed here and which you should not turn on for this.
 3. Click **Load unpacked** and select the folder that **directly contains `manifest.json`** (not its parent folder).
-4. Success looks like a new card named **Browsing History Timeline**, the version you downloaded (for example **0.5.0**), switched on. The extension asks for access to your browsing history; the exact wording depends on your Chrome version.
+4. Success looks like a new card named **Browsing History Timeline**, the version you downloaded (for example **0.6.0**), switched on. The extension asks for access to your browsing history; the exact wording depends on your Chrome version.
 5. To keep the button handy, click the puzzle-piece (Extensions) icon in the toolbar and use the pin option next to the extension.
 
 ## 6. First use

@@ -36,6 +36,22 @@ const shot = (page, name) => page.screenshot({ path: path.join(out, name) });
   await page.fill('#rules-text', JSON.stringify({ add: { finance: { domains: ['mybank.example'] } }, allow: { news_politics: { domains: ['example.org'] } } }, null, 1));
   await page.waitForTimeout(300);
   await shot(page, '3-rules-settings-light.png');
+  // 5: hide sensitive details ON (top) versus OFF (bottom), same Gambling filter, composed from two real captures.
+  await page.click('#settings-btn').catch(() => {});
+  await page.waitForTimeout(300);
+  const clip = { x: 0, y: 400, width: 1280, height: 340 };
+  const chip5 = page.locator('#cat-chips button, #cat-chips input, #cat-chips label').first();
+  await chip5.click(); await page.waitForTimeout(500);
+  const on = (await page.screenshot({ clip })).toString('base64');
+  await page.uncheck('#f-hide');
+  await page.waitForTimeout(500);
+  // Replace the fixture's real-looking brand with a reserved example domain (screenshot only).
+  await page.evaluate(() => { const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) n.nodeValue = n.nodeValue.replace(/bet365\.com/g, 'casino.example.test'); });
+  const off = (await page.screenshot({ clip })).toString('base64');
+  const cmp = await ctx.newPage();
+  await cmp.setViewportSize({ width: 1280, height: 800 });
+  await cmp.setContent(`<body style="margin:0;background:#fff;font:600 20px system-ui,sans-serif;padding:6px 8px;box-sizing:border-box;height:800px"><div>Hide sensitive details ON (default): flagged rows are masked</div><img style="width:100%;border:1px solid #888;margin:4px 0 8px" src="data:image/png;base64,${on}"><div>Hide sensitive details OFF: details shown (synthetic data)</div><img style="width:100%;border:1px solid #888;margin-top:4px" src="data:image/png;base64,${off}"></body>`);
+  await shot(cmp, '5-hide-sensitive-before-after.png');
   await ctx.close();
   ({ ctx, page } = await open('dark'));
   await shot(page, '4-timeline-dark.png');

@@ -45,5 +45,10 @@ No host permissions are requested. No remote code is used.
 
 ## Assets
 - Icons: `../icons/icon-{16,32,48,128}.png` (generated from `icon.svg`, original artwork).
-- Screenshots (1280x800, synthetic fixture data): `screenshots/`.
+- Screenshots (1280x800, synthetic fixture data, UK dates): `screenshots/`. Captions:
+  1. `1-timeline-light.png`: Your browsing history as a day-by-day timeline, with activity chart and top domains.
+  2. `2-category-filter-light.png`: Filter to flagged categories; sensitive details stay hidden by default.
+  3. `3-rules-settings-light.png`: Add or allow your own classification rules, stored only in your browser profile.
+  4. `4-timeline-dark.png`: The same timeline in dark mode.
+  5. `5-hide-sensitive-before-after.png`: Hide sensitive details on (default) versus off.
 - Privacy policy: `PRIVACY.md` (needs a public URL, see the checklist).

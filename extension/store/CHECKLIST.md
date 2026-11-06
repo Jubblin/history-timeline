@@ -1,13 +1,15 @@
 # Web Store submission checklist for Browsing History Timeline
 
-Status as of v0.5.0: the package, assets and text are ready; **nothing has been submitted** and nothing below under "You must do" has been done.
+Status as of v0.6.0: the package, assets and text are ready; **nothing has been submitted** and nothing below under "You must do" has been done.
+
+Release note for 0.6.0: the CSV export's first column header is now `time_utc` (was `time`) and the file starts with a UTF-8 BOM; scripts reading the old `time` column must be updated.
 
 ## Done in this repository
 - [x] Manifest V3, minimal permissions (`history`, `storage`), no host permissions, no remote code, strict CSP.
 - [x] Reproducible zip: `make extension-zip` (allowlist; excludes tests, scripts, store assets, fixtures; fixture mode is not in the zip).
 - [x] Manifest lint (`make extension-lint`), also run by the zip build.
 - [x] Icons 16/32/48/128 (original artwork, `icon.svg`).
-- [x] 4 screenshots at 1280x800 from synthetic fixture data (`screenshots/`).
+- [x] 5 screenshots at 1280x800 from synthetic fixture data (`screenshots/`).
 - [x] Privacy policy text (`PRIVACY.md`) consistent with the CSP and permissions.
 - [x] Listing text, single-purpose statement and permission justifications (`LISTING.md`).
 - [x] Shared UI helper sync check (`make ui-check`) and an advisory `extension-browser` CI job for the Playwright checks.
