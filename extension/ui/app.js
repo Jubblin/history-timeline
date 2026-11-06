@@ -3,7 +3,7 @@
 import { loadVisits, TRANSITIONS } from '../src/history/index.js';
 import { el, pad, localTime, fmtDay, num, debounce, catBadge as makeCatBadge, downloadBlob, buildTransitionFilter, fillRow as sharedFillRow } from './ui-common.js';
 import { CATEGORIES, createClassifier, parseUserRules, loadBundledRules } from './classify-import.js';
-import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, RANGE_REVERSED, isReversedRange, emptyFilteredMessage, transitionLabel, describeLoadError, viewState, isMasked, annotate, rovingIndex, dismissPopup, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv } from './model.js';
+import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, RANGE_REVERSED, isReversedRange, emptyFilteredMessage, transitionLabel, describeLoadError, viewState, isMasked, annotate, rovingIndex, dismissPopup, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv, csvFilename, filterSummary } from './model.js';
 
 const PAGE = 200;
 const HIDE_KEY = 'history-timeline.hideSensitive';
@@ -213,6 +213,34 @@ function updateRangeNote() {
   for (const id of ['f-start', 'f-end']) { if (bad) $(id).setAttribute('aria-invalid', 'true'); else $(id).removeAttribute('aria-invalid'); }
 }
 
+function renderSummary() {
+  const box = $('filter-summary');
+  const items = filterSummary(filters(), { catLabel, transitionLabel, allTransitions: TRANSITIONS.length });
+  const list = $('filter-chips');
+  list.replaceChildren();
+  $('filter-summary-text').textContent = items.length ? `Showing ${plural(st.filtered.length, 'visit')} matching:` : `Showing all ${plural(st.filtered.length, 'visit')}.`;
+  for (const it of items) {
+    const li = el('li', 'fchip');
+    const b = el('button', '', '\u00d7');
+    b.type = 'button'; b.setAttribute('aria-label', `Remove filter: ${it.label}`);
+    b.addEventListener('click', () => { clearFilter(it.key); $('f-reset').focus(); });
+    li.append(el('span', '', it.label + ' '), b);
+    list.appendChild(li);
+  }
+  box.classList.toggle('has-filters', items.length > 0);
+}
+
+function clearFilter(key) {
+  if (key === 'dates') { $('f-start').value = ''; $('f-end').value = ''; }
+  else if (key === 'start') $('f-start').value = '';
+  else if (key === 'end') $('f-end').value = '';
+  else if (key === 'text') $('f-q').value = '';
+  else if (key === 'domain') $('f-domain').value = '';
+  else if (key === 'transitions') for (const c of $('f-trans').querySelectorAll('input')) c.checked = true;
+  else if (key.startsWith('cat:')) st.cats.delete(key.slice(4));
+  refresh();
+}
+
 function refresh({ keepCount = false } = {}) {
   updateMaskNote();
   updateRangeNote();
@@ -230,6 +258,7 @@ function refresh({ keepCount = false } = {}) {
   $('timeline').replaceChildren();
   renderMore(Math.max(PAGE, prev));
   renderState();
+  renderSummary();
   checkSentinel();
 }
 
@@ -325,10 +354,17 @@ function initSettings(savedText) {
 }
 
 // ---- CSV ----
+let exportTimer = 0;
 function exportCsv() {
   const blob = new Blob([toCsv(st.filtered, st.hide)], { type: 'text/csv' });
-  downloadBlob(blob, 'history.csv');
-  setStatus(`Exported ${num(st.filtered.length)} rows`);
+  const name = csvFilename(filters());
+  downloadBlob(blob, name);
+  const msg = `Exported ${plural(st.filtered.length, 'row')} to ${name}. Times are in UTC.`;
+  setStatus(msg);
+  const fb = $('export-feedback');
+  fb.textContent = msg;
+  clearTimeout(exportTimer);
+  exportTimer = setTimeout(() => { fb.textContent = ''; }, 8000);
 }
 
 // ---- wiring ----

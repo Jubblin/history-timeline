@@ -168,7 +168,7 @@ const rows = (page) => page.locator('#timeline .visit').count();
     // CSV (masked)
     let [dl] = await Promise.all([page.waitForEvent('download'), page.click('#f-csv')]);
     let csv = fs.readFileSync(await dl.path(), 'utf8');
-    check(/^time,url,title,domain,transition,categories\r\n/.test(csv) && !/bet365\.com|Secret casino|aetna\.com|Bank accounts/.test(csv) && csv.includes('[hidden]') && /,gambling\r\n/.test(csv), 'CSV with hide on: flagged values masked, categories column kept');
+    check(/^\uFEFFtime_utc,url,title,domain,transition,categories\r\n/.test(csv) && !/bet365\.com|Secret casino|aetna\.com|Bank accounts/.test(csv) && csv.includes('[hidden]') && /,gambling\r\n/.test(csv), 'CSV with hide on: flagged values masked, categories column kept');
     check(csv.split('\r\n').length - 2 === total && !/\r\n[=+@-]/.test(csv), `CSV exports all ${total} filtered rows`);
     await page.uncheck('#f-hide');
     await page.waitForTimeout(300);

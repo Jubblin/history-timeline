@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, toCsv, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, rovingIndex, dismissPopup, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
+import { applyFilters, toCsv, csvFilename, filterSummary, CSV_BOM, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, rovingIndex, dismissPopup, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
 import { createClassifier, parseUserRules, loadBundledRules } from '../ui/test-support/stub-classifier.js';
 
 const T0 = new Date(2025, 5, 10, 12, 0).getTime();
@@ -33,8 +33,8 @@ test('category and transition filters', async () => {
 
 test('csv masks flagged rows, guards formulas, adds categories', async () => {
   const vs = await data();
-  const lines = toCsv(vs, true).trim().split('\r\n');
-  assert.equal(lines[0], 'time,url,title,domain,transition,categories');
+  const lines = toCsv(vs, true).slice(1).trim().split('\r\n');
+  assert.equal(lines[0], 'time_utc,url,title,domain,transition,categories');
   assert.ok(lines[1].includes(`${MASK},${MASK},${MASK}`) && lines[1].endsWith('link,gambling'));
   assert.ok(!toCsv(vs, true).includes('Secret slots'));
   assert.ok(toCsv(vs, false).includes('Secret slots'));
@@ -196,4 +196,31 @@ test('rovingIndex moves within bounds with Up/Down/Home/End and ignores other ke
   assert.equal(rovingIndex('Tab', 0, 3), null);
   assert.equal(rovingIndex('ArrowDown', -1, 3), null);
   assert.equal(rovingIndex('ArrowDown', 0, 0), null);
+});
+
+test('csv starts with a UTF-8 BOM and labels its times as UTC', async () => {
+  const csv = toCsv(await data(), false);
+  assert.equal(csv[0], CSV_BOM);
+  assert.ok(csv.startsWith(CSV_BOM + 'time_utc,url,'));
+  assert.match(csv.split('\r\n')[1], /^\d{4}-\d\d-\d\dT[\d:.]+Z,/);
+});
+
+test('csvFilename includes local date and filters, and is file-system safe', () => {
+  const now = new Date(2026, 10, 6, 9, 0);
+  assert.equal(csvFilename({}, now), 'history-2026-11-06.csv');
+  assert.equal(csvFilename({ start: '2026-08-21', end: '2026-08-21' }, now), 'history-2026-11-06-on-2026-08-21.csv');
+  assert.equal(csvFilename({ start: '2026-08-01', end: '2026-08-31', domain: 'Site0.example.test', text: 'x' }, now),
+    'history-2026-11-06-2026-08-01-to-2026-08-31-site0.example.test-search.csv');
+  assert.equal(csvFilename({ domain: '../../etc/passwd ' }, now), 'history-2026-11-06-etc-passwd.csv');
+  assert.ok(!/[\\/:*?"<>|\s]/.test(csvFilename({ domain: 'a/b c:d' }, now)));
+});
+
+test('filterSummary lists each active filter with a key for its remove button', () => {
+  assert.deepEqual(filterSummary({ start: '', end: '', text: ' ', domain: '', transitions: null, cats: new Set() }), []);
+  const s = filterSummary({ start: '2026-08-21', end: '2026-08-21', text: 'cat', domain: 'a.test', transitions: ['typed'], cats: new Set(['gambling']) },
+    { catLabel: (c) => c.toUpperCase() });
+  assert.deepEqual(s.map((x) => x.key), ['dates', 'text', 'domain', 'transitions', 'cat:gambling']);
+  assert.ok(s[1].label.includes('cat') && s[4].label.includes('GAMBLING'));
+  assert.deepEqual(filterSummary({ start: '2026-08-01', end: '2026-08-02' }).map((x) => x.key), ['start', 'end']);
+  assert.equal(filterSummary({ transitions: ['\u0000none'] })[0].label, 'no transition types');
 });

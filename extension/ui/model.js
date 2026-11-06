@@ -138,14 +138,49 @@ export function layout(visits, gapMs = DEFAULT_SESSION_GAP_MS) {
 
 // ---- CSV ----
 // Masks every flagged visit regardless of per-row reveals when `hide` is on.
+// UTF-8 BOM first so Excel reads non-Latin titles correctly; times are ISO 8601 UTC, as the header says.
+export const CSV_BOM = '\uFEFF';
 export function toCsv(visits, hide) {
-  const rows = [['time', 'url', 'title', 'domain', 'transition', 'categories'].join(',')];
+  const rows = [['time_utc', 'url', 'title', 'domain', 'transition', 'categories'].join(',')];
   for (const v of visits) {
     const m = hide && isFlagged(v);
     rows.push([new Date(v.time).toISOString(), m ? MASK : v.url, m ? MASK : v.title, m ? MASK : v.domain,
       v.transition, v.categories.join(';')].map(csvCell).join(','));
   }
-  return rows.join('\r\n') + '\r\n';
+  return CSV_BOM + rows.join('\r\n') + '\r\n';
+}
+
+// Export file name: history-<today, local>[-<from>][-to-<to>][-<domain>][-search].csv, safe for file systems.
+export function csvFilename(f, now = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  const today = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+  const slug = (t) => t.trim().toLowerCase().replace(/[^a-z0-9.-]+/g, '-').replace(/\.{2,}/g, '.').replace(/^[-.]+|[-.]+$/g, '').slice(0, 30);
+  const parts = ['history', today];
+  if (f.start && f.end) parts.push(f.start === f.end ? `on-${f.start}` : `${f.start}-to-${f.end}`);
+  else if (f.start) parts.push(`from-${f.start}`);
+  else if (f.end) parts.push(`to-${f.end}`);
+  const d = slug(f.domain || ''); if (d) parts.push(d);
+  if ((f.text || '').trim()) parts.push('search');
+  return parts.join('-') + '.csv';
+}
+
+// Active filters as [{key, label}] for the summary line; each key says which filter its remove button clears.
+export function filterSummary(f, { catLabel = (c) => c, transitionLabel: tl = (t) => t, allTransitions = 0 } = {}) {
+  const out = [];
+  const day = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); };
+  if (f.start && f.end && f.start === f.end) out.push({ key: 'dates', label: day(f.start) });
+  else {
+    if (f.start) out.push({ key: 'start', label: `from ${day(f.start)}` });
+    if (f.end) out.push({ key: 'end', label: `to ${day(f.end)}` });
+  }
+  if ((f.text || '').trim()) out.push({ key: 'text', label: `search \u201c${f.text.trim()}\u201d` });
+  if ((f.domain || '').trim()) out.push({ key: 'domain', label: f.domain.trim() });
+  if (f.transitions) {
+    const on = f.transitions.filter((t) => t !== '\u0000none');
+    out.push({ key: 'transitions', label: on.length ? `types: ${on.map(tl).join(', ')}` : 'no transition types' });
+  }
+  for (const c of f.cats || []) out.push({ key: 'cat:' + c, label: `flagged: ${catLabel(c)}` });
+  return out;
 }
 
 // ---- keyboard helpers (DOM-free apart from the objects passed in, so they are unit-tested in Node) ----

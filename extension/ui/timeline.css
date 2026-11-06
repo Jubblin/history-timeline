@@ -132,3 +132,10 @@ button.vtitle.masked-btn{border:0;background:none;padding:0;text-align:left}
 .range-msg{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--flag);font-size:14px}
 .range-msg[hidden]{display:none}
 input[aria-invalid="true"]{border-color:var(--flag);outline:1px solid var(--flag)}
+
+.filter-summary { margin: .25rem 0 .5rem; font-size: .9em; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.fchips { display: contents; list-style: none; margin: 0; padding: 0; }
+.fchip { display: inline-flex; align-items: center; gap: .15rem; padding: .1rem .2rem .1rem .55rem; border: 1px solid var(--muted, currentColor); border-radius: 999px; }
+.fchip button { min-width: 24px; min-height: 24px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; border-radius: 50%; }
+.export-feedback { margin: .25rem 0; font-size: .9em; }
+.export-feedback:empty { display: none; }
