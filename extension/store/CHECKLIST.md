@@ -1,6 +1,6 @@
 # Web Store submission checklist for Browsing History Timeline
 
-Status as of v0.6.0: submitted and accepted; the extension is live on the [Chrome Web Store](https://chromewebstore.google.com/detail/ffclondmobadghahcmljicbjofpmmjhb). The items below are kept as a record and for future submissions.
+Status: the extension is live on the [Chrome Web Store](https://chromewebstore.google.com/detail/ffclondmobadghahcmljicbjofpmmjhb) (version 0.5.0 accepted; later releases are uploaded by hand until upload automation is switched on). The items below are kept as a record and for future submissions.
 
 Release note for 0.6.0: the CSV export's first column header is now `time_utc` (was `time`) and the file starts with a UTF-8 BOM; scripts reading the old `time` column must be updated.
 
