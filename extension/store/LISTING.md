@@ -22,7 +22,7 @@ See what your browser profile has recorded about you.
 
 Browsing History Timeline turns your browsing history into a readable timeline: visits grouped into days and sessions, an activity chart, top sites, search and filters (date range, site, transition type), and CSV export.
 
-Visits that look sensitive (gambling, health, finance, adult content, privacy tools, news and politics) get clear badges, per-day counts and category filters, so you can review what is recorded before you share a screen, hand over a device, or clean up. "Hide sensitive details" masks flagged titles, URLs and sites everywhere, including in the CSV export.
+Visits that look sensitive (gambling, health, finance, adult content, privacy tools, news and politics) get clear badges, per-day counts and category filters, so you can review what is recorded before you share a screen, hand over a device, or clean up. "Hide sensitive details" is on by default and masks flagged titles, URLs and sites everywhere, including in the CSV export; untick it to see everything.
 
 Private by design:
 - Works entirely on your device. No network requests, no servers, no accounts, no analytics, no remote code.

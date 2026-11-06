@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, toCsv, csvFilename, filterSummary, CSV_BOM, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, rovingIndex, dismissPopup, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
+import { initialHide, HIDE_DEFAULT, friendlyRulesError, needsEmptyConfirm, rulesCategoryList, RULES_EXAMPLE, barIndexAt, emptyFilteredMessage, applyFilters, toCsv, csvFilename, filterSummary, CSV_BOM, csvCell, layout, chartBins, domainStats, annotate, isMasked, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, describeLoadError, viewState, rovingIndex, dismissPopup, ERROR_NO_ACCESS, ERROR_GENERIC, LOADING_MSG } from '../ui/model.js';
 import { createClassifier, parseUserRules, loadBundledRules } from '../ui/test-support/stub-classifier.js';
 
 const T0 = new Date(2025, 5, 10, 12, 0).getTime();
@@ -223,4 +223,44 @@ test('filterSummary lists each active filter with a key for its remove button', 
   assert.ok(s[1].label.includes('cat') && s[4].label.includes('GAMBLING'));
   assert.deepEqual(filterSummary({ start: '2026-08-01', end: '2026-08-02' }).map((x) => x.key), ['start', 'end']);
   assert.equal(filterSummary({ transitions: ['\u0000none'] })[0].label, 'no transition types');
+});
+
+test('hide sensitive details: on for first-time users, saved choice wins', () => {
+  assert.equal(HIDE_DEFAULT, true);
+  assert.equal(initialHide(null), true);
+  assert.equal(initialHide(undefined), true);
+  assert.equal(initialHide('garbage'), true);
+  assert.equal(initialHide('1'), true);
+  assert.equal(initialHide('0'), false); // a saved "off" is never overridden
+});
+
+test('empty-state messages still make sense with hiding on from the start', async () => {
+  assert.equal(emptyFilteredMessage({ hide: true, searching: false, hiddenCount: 0 }), EMPTY_FILTERED);
+  assert.match(emptyFilteredMessage({ hide: true, searching: true, hiddenCount: 2 }), /2 sensitive visits would match.*Turn off \u201cHide sensitive details\u201d/);
+});
+
+test('rules editor: categories, example, friendly errors and empty confirm', async () => {
+  const cats = [{ id: 'finance', label: 'Finance' }, { id: 'news_politics', label: 'News & politics' }];
+  assert.equal(rulesCategoryList(cats), 'finance (Finance), news_politics (News & politics)');
+  const ok = parseUserRules(RULES_EXAMPLE);
+  assert.ok(ok.rules && !ok.error, 'inserted example is valid');
+  const bad = parseUserRules('{not json');
+  const msg = friendlyRulesError(bad.error, cats);
+  assert.match(msg, /not valid JSON.*Insert example/);
+  assert.match(msg, /Detail: /);
+  assert.match(friendlyRulesError('unknown category "x" (valid: a)', cats), /Valid categories: finance, news_politics/);
+  assert.match(friendlyRulesError('unknown field "x" (valid: add, allow)', cats), /add.*allow/);
+  assert.match(friendlyRulesError('something odd', cats), /nothing was saved/);
+  assert.equal(needsEmptyConfirm('  ', '{"add":{}}'), true);
+  assert.equal(needsEmptyConfirm('', ''), false);
+  assert.equal(needsEmptyConfirm('{}', '{"add":{}}'), false);
+});
+
+test('chart scrub maps a pointer x to the nearest bar', () => {
+  assert.equal(barIndexAt(0, 0, 100, 10), 0);
+  assert.equal(barIndexAt(55, 0, 100, 10), 5);
+  assert.equal(barIndexAt(999, 0, 100, 10), 9);
+  assert.equal(barIndexAt(-5, 0, 100, 10), 0);
+  assert.equal(barIndexAt(10, 0, 0, 10), -1);
+  assert.equal(barIndexAt(10, 0, 100, 0), -1);
 });

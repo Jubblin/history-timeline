@@ -3,7 +3,7 @@
 import { loadVisits, TRANSITIONS } from '../src/history/index.js';
 import { el, pad, localTime, fmtDay, num, debounce, catBadge as makeCatBadge, downloadBlob, buildTransitionFilter, fillRow as sharedFillRow } from './ui-common.js';
 import { CATEGORIES, createClassifier, parseUserRules, loadBundledRules } from './classify-import.js';
-import { MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, RANGE_REVERSED, isReversedRange, emptyFilteredMessage, transitionLabel, describeLoadError, viewState, isMasked, annotate, rovingIndex, dismissPopup, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv, csvFilename, filterSummary } from './model.js';
+import { barIndexAt, initialHide, RULES_EXAMPLE, RULES_EMPTY_CONFIRM, rulesCategoryList, needsEmptyConfirm, friendlyRulesError, MASK, plural, EMPTY_HISTORY, EMPTY_FILTERED, LOADING_MSG, RANGE_REVERSED, isReversedRange, emptyFilteredMessage, transitionLabel, describeLoadError, viewState, isMasked, annotate, rovingIndex, dismissPopup, applyFilters, categoryCounts, chartBins, domainStats, layout, toCsv, csvFilename, filterSummary } from './model.js';
 
 const PAGE = 200;
 const HIDE_KEY = 'history-timeline.hideSensitive';
@@ -329,11 +329,30 @@ function initSettings(savedText) {
     $('settings-btn').setAttribute('aria-expanded', String(open));
     if (open) $('rules-text').focus();
   });
+  $('rules-cats-list').textContent = rulesCategoryList(CATEGORIES);
+  let confirmEmpty = false;
+  const resetConfirm = () => { confirmEmpty = false; $('rules-save').textContent = 'Save rules'; };
+  $('rules-text').addEventListener('input', resetConfirm);
+  $('rules-example').addEventListener('click', () => {
+    $('rules-text').value = RULES_EXAMPLE;
+    resetConfirm();
+    $('rules-error').textContent = '';
+    $('rules-text').removeAttribute('aria-invalid');
+    $('rules-status').textContent = 'Example inserted. Edit it, then press \u201cSave rules\u201d.';
+    $('rules-text').focus();
+  });
   $('rules-save').addEventListener('click', async () => {
     const text = $('rules-text').value;
     const r = userRulesFromText(text);
     $('rules-status').textContent = '';
-    if (r.error) { $('rules-error').textContent = r.error; $('rules-text').setAttribute('aria-invalid', 'true'); return; }
+    if (r.error) { $('rules-error').textContent = friendlyRulesError(r.error, CATEGORIES); $('rules-text').setAttribute('aria-invalid', 'true'); resetConfirm(); return; }
+    if (needsEmptyConfirm(text, st.rulesSaved) && !confirmEmpty) {
+      confirmEmpty = true;
+      $('rules-save').textContent = 'Confirm: remove all rules';
+      $('rules-error').textContent = RULES_EMPTY_CONFIRM;
+      return;
+    }
+    resetConfirm();
     $('rules-error').textContent = '';
     $('rules-notice').textContent = '';
     $('rules-text').removeAttribute('aria-invalid');
@@ -347,6 +366,7 @@ function initSettings(savedText) {
   });
   $('rules-revert').addEventListener('click', () => {
     $('rules-text').value = st.rulesSaved;
+    resetConfirm();
     $('rules-error').textContent = '';
     $('rules-text').removeAttribute('aria-invalid');
     $('rules-status').textContent = 'Changes reverted.';
@@ -390,7 +410,9 @@ function wire() {
   });
   $('f-csv').addEventListener('click', exportCsv);
   dismissPopup($('f-trans').closest('details'), document, $('f-trans').closest('details').querySelector('summary'));
-  try { st.hide = localStorage.getItem(HIDE_KEY) === '1'; } catch { /* ignore */ }
+  let storedHide = null;
+  try { storedHide = localStorage.getItem(HIDE_KEY); } catch { /* ignore */ }
+  st.hide = initialHide(storedHide);
   $('f-hide').checked = st.hide;
   $('f-hide').addEventListener('change', (e) => {
     st.hide = e.target.checked;
@@ -421,6 +443,30 @@ function wire() {
     const t = bars[Math.max(0, Math.min(bars.length - 1, j))];
     bars[i].tabIndex = -1; t.tabIndex = 0; t.focus();
   });
+  // Touch/pen scrub: bars can be a few pixels wide on small screens, so a horizontal drag picks the
+  // nearest bar (shown in the status line) and lifting the finger zooms to it.
+  let scrubbing = false, swallowClick = false, scrubBar = null;
+  const barAt = (e) => {
+    const bars = [...chart.querySelectorAll('.bar')];
+    const r = chart.getBoundingClientRect();
+    return bars[barIndexAt(e.clientX, r.left, r.width, bars.length)] ?? null;
+  };
+  const mark = (b) => {
+    for (const x of chart.querySelectorAll('.bar.scrub')) x.classList.remove('scrub');
+    scrubBar = b;
+    if (b) { b.classList.add('scrub'); setStatus(b.getAttribute('aria-label')); }
+  };
+  chart.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; scrubbing = true; mark(barAt(e)); });
+  chart.addEventListener('pointermove', (e) => { if (scrubbing) mark(barAt(e)); });
+  chart.addEventListener('pointerup', (e) => {
+    if (!scrubbing) return;
+    scrubbing = false;
+    const b = barAt(e) ?? scrubBar;
+    mark(null);
+    if (b) { swallowClick = true; setTimeout(() => { swallowClick = false; }, 400); b.click(); }
+  });
+  chart.addEventListener('pointercancel', () => { scrubbing = false; mark(null); });
+  chart.addEventListener('click', (e) => { if (swallowClick && e.isTrusted) { swallowClick = false; e.stopPropagation(); } }, true);
   chart.addEventListener('focusin', (e) => {
     const t = e.target.closest?.('.bar');
     if (t) for (const b of chart.querySelectorAll('.bar')) b.tabIndex = b === t ? 0 : -1;

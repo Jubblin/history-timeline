@@ -70,7 +70,7 @@ Click the extension's toolbar button. The timeline opens in a new tab (or focuse
 
 - **Loading:** a progress bar and a **Cancel loading** button show while history loads. The first rows appear quickly and totals fill in as loading finishes. Very large histories can take a few seconds.
 - **Browse:** pick a date range (From / To), search by title or URL, filter by domain, and open **Transition types** for more filters.
-- **Sensitive flags:** visits to categories such as gambling or adult sites are badged. Turn on **Hide sensitive details** before sharing your screen; it masks those titles and URLs (and the CSV export).
+- **Sensitive flags:** visits to categories such as gambling or adult sites are badged. **Hide sensitive details** is on by default (untick it to see everything, and Chrome remembers your choice); it masks those titles and URLs (and the CSV export).
 - **Export CSV:** downloads what the current filters show.
 - **Settings:** add your own rules as JSON (`add` flags more sites, `allow` removes matches). Details are in the [extension README](../extension/README.md).
 

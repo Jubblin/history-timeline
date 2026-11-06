@@ -204,3 +204,39 @@ export function dismissPopup(details, doc, summary) {
     if (details.open && !details.contains(e.target)) details.open = false;
   });
 }
+
+// ---- "Hide sensitive details": on by default for first-time users; a saved choice always wins ----
+export const HIDE_DEFAULT = true;
+export function initialHide(stored) {
+  if (stored === '1') return true;
+  if (stored === '0') return false;
+  return HIDE_DEFAULT; // nothing (or something unrecognised) stored: first-time default
+}
+
+// ---- rules editor ----
+export const RULES_EXAMPLE = '{\n  "add": {\n    "finance": { "domains": ["mybank.example"] }\n  },\n  "allow": {\n    "news_politics": { "domains": ["example.org"] }\n  }\n}';
+export const RULES_EMPTY_CONFIRM = 'Saving an empty box removes all your custom rules. Press “Save rules” again to confirm.';
+export const rulesCategoryList = (cats) => cats.map((c) => `${c.id} (${c.label})`).join(', ');
+// Saving blank text over saved rules would silently delete them, so it needs a second press.
+export const needsEmptyConfirm = (text, saved) => !String(text).trim() && !!String(saved).trim();
+
+// Plain-English version of a rules parser error. The technical detail is kept after the plain text.
+export function friendlyRulesError(msg, cats = []) {
+  const m = String(msg ?? '');
+  const valid = cats.length ? ` Valid categories: ${cats.map((c) => c.id).join(', ')}.` : '';
+  let plain;
+  if (/^(invalid|not valid) JSON/i.test(m)) plain = 'This is not valid JSON, so nothing was saved. Check for a missing quote, comma or bracket, or press “Insert example” to start from a working one.';
+  else if (/must be a JSON object/i.test(m)) plain = 'The rules must be a JSON object that starts with { and ends with }.';
+  else if (/unknown field/i.test(m)) plain = 'Only “add” and “allow” are allowed at the top level.';
+  else if (/unknown category/i.test(m)) plain = 'One of the category names is not recognised.' + valid;
+  else if (/larger than/i.test(m)) plain = 'The rules text is too large.';
+  else if (/keyword/i.test(m)) plain = 'A keyword is too short or contains a space, /, ? or #.';
+  else plain = 'These rules could not be used, so nothing was saved.';
+  return `${plain} (Detail: ${m})`;
+}
+
+// Index of the chart bar under a pointer at clientX, for touch scrubbing.
+export function barIndexAt(x, left, width, n) {
+  if (!n || !(width > 0)) return -1;
+  return Math.max(0, Math.min(n - 1, Math.floor(((x - left) / width) * n)));
+}
