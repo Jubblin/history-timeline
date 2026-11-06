@@ -104,6 +104,14 @@ Once the workflow succeeds:
 
 Re-running the workflow for a tag whose release is still a draft replaces the draft's assets; if the release is already published the job fails with a clear message and changes nothing. Attestations are created at build time for the archives and `SHA256SUMS`, so the draft state does not affect them. Check a download with `sha256sum -c SHA256SUMS` or `gh attestation verify <file> --repo Jubblin/history-timeline`.
 
+### Chrome Web Store upload (optional)
+
+The `chrome-web-store` job of the Release workflow uploads the zip built in the same run to the Chrome Web Store, waits until the Store reports the upload as processed, then submits it for review. It is skipped unless the tag is `v*` and the repository variable `CWS_PUBLISH` is `true`, so releases work unchanged without it. Submitting cannot be undone once it is in review, so the job runs in the `chrome-web-store` environment with required reviewers: approving the run is the final go/no-go. It refuses to run for a version the Store already has (a re-run of the same tag fails instead of resubmitting) or while another version is in review.
+
+To upload only and leave a draft in the dashboard, run the `Release` workflow manually (Actions, Run workflow) on the `vX.Y.Z` tag and untick **submit**.
+
+One-time setup is in `extension/store/CHECKLIST.md`. The first upload must be done by hand in the dashboard.
+
 CI (`ci.yml`) and the security scans (`security.yml`) run on every pull request. Workflow actions are pinned to full commit SHAs and updated by Renovate.
 
 ## Pull requests
