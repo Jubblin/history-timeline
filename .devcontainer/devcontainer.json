@@ -1,5 +1,5 @@
 {
   "name": "history-timeline",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:26-bookworm",
   "postCreateCommand": "node --version"
 }
