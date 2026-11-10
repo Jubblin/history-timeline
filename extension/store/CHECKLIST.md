@@ -29,3 +29,12 @@ Release note for 0.6.0: the CSV export's first column header is now `time_utc` (
 - Not tested in branded Google Chrome (it ignores `--load-extension` automation); tested in Playwright's Chromium and by loading the unpacked zip contents.
 - Chromebook/ChromeOS behaviour and managed-device policy blocking are untested.
 - No Firefox/Edge listing; Edge accepts Chrome extensions via its own add-ons portal, not covered here.
+
+## Optional: automatic upload from the release workflow
+One-time setup, after the first manual upload (the item must already exist):
+- [ ] In Google Cloud, create or pick a project, enable the **Chrome Web Store API**, configure the OAuth consent screen (add your Google account as a test user, or publish the app) and create an OAuth client ID of type **Desktop app**. This gives `CWS_CLIENT_ID` and `CWS_CLIENT_SECRET`.
+- [ ] Get a refresh token for the scope `https://www.googleapis.com/auth/chromewebstore` while signed in as the account that owns the item (for example with the OAuth 2.0 Playground using your own client ID and secret, or a one-off consent flow). This is `CWS_REFRESH_TOKEN`.
+- [ ] `CWS_EXTENSION_ID` is the 32-character item ID in the dashboard URL; `CWS_PUBLISHER_ID` is shown in the dashboard under Account.
+- [ ] In GitHub, Settings, Environments, create `chrome-web-store`; add the five secrets above there (not as repository secrets); under Deployment protection rules enable **Required reviewers** and add yourself; restrict deployment to tags `v*`.
+- [ ] Set the repository variable `CWS_PUBLISH` to `true` (Settings, Secrets and variables, Actions, Variables). Unset it to switch the job off.
+- Not tested without real credentials: the first tagged release after setup is the real test. Use the manual run with **submit** unticked first to check upload-only.
