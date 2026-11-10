@@ -1,6 +1,18 @@
 # Installing the Browsing History Timeline extension (from a release)
 
-This guide installs the released extension zip into Chrome with **Load unpacked**. The extension is not on the Chrome Web Store yet. Chrome's screens may look slightly different depending on your Chrome version; the steps describe them in general terms.
+The easiest way to install the extension is from the [Chrome Web Store](https://chromewebstore.google.com/detail/ffclondmobadghahcmljicbjofpmmjhb) (see below). The rest of this guide installs a released extension zip into Chrome with **Load unpacked**, as an alternative. Chrome's screens may look slightly different depending on your Chrome version; the steps describe them in general terms.
+
+## Install from the Chrome Web Store (recommended)
+
+1. Open the [Browsing History Timeline listing](https://chromewebstore.google.com/detail/ffclondmobadghahcmljicbjofpmmjhb).
+2. Choose **Add to Chrome** and confirm the permission prompt (`history` and `storage`).
+3. Click the extension's toolbar button (use the puzzle-piece menu to pin it if needed) to open the timeline.
+
+Store installs update automatically, so you can skip the rest of this guide unless you want to install from a release zip instead. If your device is managed, the store may be blocked or the extension disallowed by policy; ask the administrator.
+
+## Install from a release zip (alternative)
+
+The numbered steps below install a release zip with Load unpacked and verify its checksum first.
 
 ## 1. What you get
 
@@ -80,7 +92,7 @@ Chrome extensions are per profile. Install once in each profile you want to audi
 
 ## 8. Updating
 
-There is no automatic update for an unpacked extension. For a new release:
+An extension installed from the Chrome Web Store updates automatically. There is no automatic update for an unpacked extension. For a new release of an unpacked install:
 
 1. Download and verify the new zip (step 3).
 2. Either extract it over the **same** folder (replace the old files; extract into a fresh folder first and copy across if unsure), or extract into a new empty folder, remove the old extension and load the new folder.

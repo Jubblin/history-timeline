@@ -1,6 +1,6 @@
 # Web Store listing text
 
-Everything here is draft text to paste into the developer dashboard. Nothing has been submitted.
+This text is kept in sync with the live listing and is pasted into the developer dashboard for updates.
 
 ## Name
 Browsing History Timeline
